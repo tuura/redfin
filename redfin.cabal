@@ -1,0 +1,29 @@
+name:          redfin
+version:       0.0.1
+synopsis:      Specification and verification of the REDFIN sequencer
+author:        Andrey Mokhov <andrey.mokhov@gmail.com>, github: @snowleopard
+maintainer:    Andrey Mokhov <andrey.mokhov@gmail.com>, github: @snowleopard
+copyright:     Andrey Mokhov, 2017
+homepage:      https://github.com/tuura/redfin
+category:      Hardware
+build-type:    Simple
+cabal-version: >=1.10
+
+source-repository head
+    type:     git
+    location: https://github.com/tuura/redfin.git
+
+library
+    hs-source-dirs:     src
+    exposed-modules:    Redfin
+    build-depends:      base       >= 4.8 && < 5,
+                        containers == 0.5.*,
+                        extra      == 1.4.10,
+                        QuickCheck >= 2.6 && < 2.9
+    default-language:   Haskell2010
+    default-extensions: FlexibleContexts
+                        GeneralizedNewtypeDeriving
+                        ScopedTypeVariables
+                        TupleSections
+                        TypeFamilies
+    GHC-options:        -O2 -Wall -fwarn-tabs
