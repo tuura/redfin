@@ -29,7 +29,8 @@ module Redfin (
     readRegister, writeRegister,
     readMemory, writeMemory,
     readFlag, writeFlag,
-    readProgram, fetchInstruction, incrementInstructionCounter, withFetch,
+    readProgram, readInstructionRegister, writeInstructionRegister,
+    fetchInstruction, incrementInstructionCounter, withFetch,
     delay,
     (<~)
     ) where
@@ -47,7 +48,7 @@ newtype Value = Value Int64
     deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | The 'UImm5' datatype represents 5-bit unsigned immediate arguments that are
--- used by the 'pmac' instruction.
+-- used by the 'Redfin.InstructionSet.pmac' instruction.
 newtype UImm5 = UImm5 Word8 deriving (Eq, Num, Ord, Show)
 
 -- | The 'UImm8' datatype represents 8-bit unsigned immediate arguments that are
@@ -55,7 +56,7 @@ newtype UImm5 = UImm5 Word8 deriving (Eq, Num, Ord, Show)
 newtype UImm8 = UImm8 Word8 deriving (Eq, Num, Ord, Show)
 
 -- | The 'UImm10' datatype represents 10-bit unsigned immediate arguments that
--- are used by the 'wait' instruction.
+-- are used by the 'Redfin.InstructionSet.wait' instruction.
 newtype UImm10 = UImm10 Word16 deriving (Eq, Num, Ord, Show)
 
 -- | Extend an unsigned integer to 'Value'. The latter must be wide enough to
@@ -84,7 +85,7 @@ class SignedValue a where
 instance SignedValue SImm8  where signedValue (SImm8  x) = fromIntegral x
 instance SignedValue SImm10 where signedValue (SImm10 x) = fromIntegral x
 
--- | Redfin has 4 general-purpose registers R0-R3.
+-- | Redfin has 4 general-purpose registers 'R0' - 'R3'.
 data Register = R0 | R1 | R2 | R3 deriving (Eq, Ord, Show)
 
 -- | The register bank is represented by a map from registers to their values.
@@ -111,16 +112,17 @@ data Flag = Condition    -- ^ Set by comparison instructions.
           | Overflow     -- ^ Set when arithmetic overflow occurs.
           | OutOfMemory  -- ^ Set when the memory address exceeds the size of
                          --   Redfin memory and needs to be truncated, e.g. see
-                         --   the 'ldmi' instruction.
+                         --   the 'Redfin.InstructionSet.ldmi' instruction.
           | OutOfProgram -- ^ Set when the instruction counter goes outside
-                         --   program memory, e.g. after the 'jmpi' instruction.
+                         --   program memory, e.g. after the
+                         --   'Redfin.InstructionSet.jmpi' instruction.
           deriving (Eq, Ord, Show)
 
 -- | The state of flags is represented by a map from flags to their values.
 type Flags = Map Flag Bool
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
--- effect of the 'wait' instruction.
+-- effect of the 'Redfin.InstructionSet.wait' instruction.
 newtype Clock = Clock Int64 deriving (Eq, Num, Show)
 
 -- | The 'State' of Redfin is fully characterised by the contents of the register
@@ -129,12 +131,13 @@ newtype Clock = Clock Int64 deriving (Eq, Num, Show)
 -- be possible to write to it, hence we make it part of the state to have a
 -- faithful model.
 data State = State
-    { registers          :: RegisterBank
-    , instructionCounter :: InstructionAddress
-    , flags              :: Flags
-    , memory             :: Memory
-    , program            :: Program
-    , clock              :: Clock }
+    { registers           :: RegisterBank
+    , instructionCounter  :: InstructionAddress
+    , instructionRegister :: InstructionCode
+    , flags               :: Flags
+    , memory              :: Memory
+    , program             :: Program
+    , clock               :: Clock }
 
 -- | The Redfin state transformer.
 data Redfin a = Redfin { execute :: (State -> (a, State)) } deriving Functor
@@ -164,7 +167,7 @@ transformState f = Redfin $ \s -> ((), f s)
 -- | Advance the clock by a given number of clock cycles.
 delay :: Clock -> Redfin ()
 delay cycles = transformState $
-    \(State rs ic fs m p c) -> State rs ic fs m p (c + cycles)
+    \(State rs ic ir fs m p c) -> State rs ic ir fs m p (c + cycles)
 
 -- | Lookup the 'Value' in a given 'Register'. If the register has never been
 -- initialised, this function returns 0, which is how the current hardware
@@ -178,7 +181,7 @@ readRegister register = do
 -- | Write a new 'Value' to a given 'Register'.
 writeRegister :: Register -> Value -> Redfin ()
 writeRegister register value = transformState $
-    \(State rs ic fs m p c) -> State (Map.insert register value rs) ic fs m p c
+    \(State rs ic ir fs m p c) -> State (Map.insert register value rs) ic ir fs m p c
 
 -- | Lookup the 'Value' at the given 'MemoryAddress'. If the value has never been
 -- initialised, this function returns 0, which is how the current hardware
@@ -192,7 +195,7 @@ readMemory address = do
 -- | Write a new 'Value' to the given 'MemoryAddress'.
 writeMemory :: MemoryAddress -> Value -> Redfin ()
 writeMemory address value = transformState $
-    \(State rs ic fs m p c) -> State rs ic fs (Map.insert address value m) p c
+    \(State rs ic ir fs m p c) -> State rs ic ir fs (Map.insert address value m) p c
 
 -- | Convert a 'Value' to the 'MemoryAddress'. If the value needs to be
 -- truncated, the 'OutOfMemory' flag is set.
@@ -212,7 +215,7 @@ readFlag flag = do
 -- | Set a given 'Flag' to the specified Boolean value.
 writeFlag :: Flag -> Bool -> Redfin ()
 writeFlag flag value = transformState $
-    \(State rs ic fs m p c) -> State rs ic (Map.insert flag value fs) m p c
+    \(State rs ic ir fs m p c) -> State rs ic ir (Map.insert flag value fs) m p c
 
 -- | Lookup the 'InstructionCode' at the given 'InstructionAddress'. If the
 -- program has no code associated with the address, the function returns 0 and
@@ -226,31 +229,42 @@ readProgram address = do
             writeFlag OutOfProgram True
             return 0
 
--- | Fetch the instruction code pointed to by the instruction counter.
-fetchInstruction :: Redfin InstructionCode
+-- | Fetch the instruction code pointed to by the instruction counter and store
+-- it in the instruction register. We assume that instruction fetch takes one
+-- clock cycle.
+fetchInstruction :: Redfin ()
 fetchInstruction = do
     state <- readState
     delay 1
-    readProgram $ instructionCounter state
+    writeInstructionRegister =<< readProgram (instructionCounter state)
 
 -- | Increment the instruction counter.
 incrementInstructionCounter :: Redfin ()
 incrementInstructionCounter = transformState $
-    \(State rs ic fs m p c) -> State rs (ic + 1) fs m p c
+    \(State rs ic ir fs m p c) -> State rs (ic + 1) ir fs m p c
+
+-- | Read the instruction register.
+readInstructionRegister :: Redfin InstructionCode
+readInstructionRegister = instructionRegister <$> readState
+
+-- | Write a given 'InstructionCode' to the instruction register.
+writeInstructionRegister :: InstructionCode -> Redfin ()
+writeInstructionRegister instructionCode = transformState $
+    \(State rs ic _ fs m p c) -> State rs ic instructionCode fs m p c
 
 -- | Each Redfin instruction starts by incrementing the instruction counter and
 -- ends by fetching the next instruction code. The 'withFetch' combinator can
 -- be used to wrap any given action with the increment and fetch steps, in
 -- sequence. In future we may consider adding some parallelism, e.g. by
 -- fetching the next instruction in parallel with the execution of the action.
-withFetch :: Redfin () -> Redfin InstructionCode
+withFetch :: Redfin () -> Redfin ()
 withFetch action = incrementInstructionCounter >> action >> fetchInstruction
 
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
 --
 -- > add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
-(<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin InstructionCode
+(<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin ()
 (<~) res (arg1, op, arg2) = withFetch $ do
     x <- arg1
     y <- arg2
