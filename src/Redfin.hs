@@ -164,6 +164,15 @@ writeMemory :: MemoryAddress -> Value -> Redfin ()
 writeMemory address value = transformState $
     \(State rs ic fs m p) -> State rs ic fs (Map.insert address value m) p
 
+-- | Convert a 'Value' to the 'MemoryAddress'. If the value needs to be
+-- truncated, the 'OutOfMemory' flag is set.
+toMemoryAddress :: Value -> Redfin MemoryAddress
+toMemoryAddress value
+    | value < 256 = return $ fromIntegral value
+    | otherwise   = do
+        writeFlag OutOfMemory True
+        return $ fromIntegral (value .&. 255)
+
 -- | Lookup the value of a given 'Flag'. Flags are initialised to 'False'.
 readFlag :: Flag -> Redfin Bool
 readFlag flag = do
@@ -198,19 +207,20 @@ incrementInstructionCounter :: Redfin ()
 incrementInstructionCounter = transformState $
     \(State rs ic fs m p) -> State rs (ic + 1) fs m p
 
--- | Convert a 'Value' to the 'MemoryAddress'. If the value needs to be
--- truncated, the 'OutOfMemory' flag is set.
-toMemoryAddress :: Value -> Redfin MemoryAddress
-toMemoryAddress value
-    | value < 256 = return $ fromIntegral value
-    | otherwise   = do
-        writeFlag OutOfMemory True
-        return $ fromIntegral (value .&. 255)
+-- | Each Redfin instruction starts by incrementing the instruction counter and
+-- ends by fetching the next instruction code. The 'withFetch' combinator can
+-- be used to wrap any given action with the increment and fetch steps, in
+-- sequence. In future we may consider adding some parallelism, e.g. by
+-- fetching the next instruction in parallel with the execution of the action.
+withFetch :: Redfin () -> Redfin InstructionCode
+withFetch action = incrementInstructionCounter >> action >> fetchInstruction
 
 -- | A convenient combinator for defining instructions that fit the pattern
--- @res = arg1 op arg2@, e.g. addition is @rX = rX + [dmemaddr]@.
-(<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin ()
-(<~) res (arg1, op, arg2) = do
+-- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
+--
+-- > add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
+(<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin InstructionCode
+(<~) res (arg1, op, arg2) = withFetch $ do
     x <- arg1
     y <- arg2
     res $ x `op` y
@@ -219,52 +229,52 @@ toMemoryAddress value
 -- TODO: Implement fixed-point instructions.
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
-add :: Register -> MemoryAddress -> Redfin ()
+add :: Register -> MemoryAddress -> Redfin InstructionCode
 add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
 
 -- | Instruction @add_si rX, simm@ is implemented as @rX = rX + simm@.
-add_si :: Register -> SImm8 -> Redfin ()
+add_si :: Register -> SImm8 -> Redfin InstructionCode
 add_si rX simm = writeRegister rX <~ (readRegister rX, (+), pure $ signedValue simm)
 
 -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
-sub :: Register -> MemoryAddress -> Redfin ()
+sub :: Register -> MemoryAddress -> Redfin InstructionCode
 sub rX dmemaddr = writeRegister rX <~ (readRegister rX, (-), readMemory dmemaddr)
 
 -- | Instruction @sub_si rX, simm@ is implemented as @rX = rX - simm@.
-sub_si :: Register -> SImm8 -> Redfin ()
+sub_si :: Register -> SImm8 -> Redfin InstructionCode
 sub_si rX simm = writeRegister rX <~ (readRegister rX, (-), pure $ signedValue simm)
 
 -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
-mul :: Register -> MemoryAddress -> Redfin ()
+mul :: Register -> MemoryAddress -> Redfin InstructionCode
 mul rX dmemaddr = writeRegister rX <~ (readRegister rX, (*), readMemory dmemaddr)
 
 -- | Instruction @mul_si rX, simm@ is implemented as @rX = rX * simm@.
-mul_si :: Register -> SImm8 -> Redfin ()
+mul_si :: Register -> SImm8 -> Redfin InstructionCode
 mul_si rX simm = writeRegister rX <~ (readRegister rX, (*), pure $ signedValue simm)
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
-div :: Register -> MemoryAddress -> Redfin ()
+div :: Register -> MemoryAddress -> Redfin InstructionCode
 div rX dmemaddr = writeRegister rX <~ (readRegister rX, Std.div, readMemory dmemaddr)
 
 -- | Instruction @div_si rX, simm@ is implemented as @rX = rX / simm@.
-div_si :: Register -> SImm8 -> Redfin ()
+div_si :: Register -> SImm8 -> Redfin InstructionCode
 div_si rX simm = writeRegister rX <~ (readRegister rX, Std.div, pure $ signedValue simm)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
-and :: Register -> MemoryAddress -> Redfin ()
+and :: Register -> MemoryAddress -> Redfin InstructionCode
 and rX dmemaddr = writeRegister rX <~ (readRegister rX, (.&.), readMemory dmemaddr)
 
 -- | Instruction @or rX, dmemaddr@ is implemented as @rX = rX | [dmemaddr]@.
-or :: Register -> MemoryAddress -> Redfin ()
+or :: Register -> MemoryAddress -> Redfin InstructionCode
 or rX dmemaddr = writeRegister rX <~ (readRegister rX, (.|.), readMemory dmemaddr)
 
 -- | Instruction @xor rX, dmemaddr@ is implemented as @rX = rX xor [dmemaddr]@.
-xor :: Register -> MemoryAddress -> Redfin ()
+xor :: Register -> MemoryAddress -> Redfin InstructionCode
 xor rX dmemaddr = writeRegister rX <~ (readRegister rX, Std.xor, readMemory dmemaddr)
 
 -- | Instruction @not rX, dmemaddr@ is implemented as @rX = ~rX@.
-not :: Register -> Redfin ()
-not rX = writeRegister rX =<< (complement <$> readRegister rX)
+not :: Register -> Redfin InstructionCode
+not rX = withFetch $ writeRegister rX =<< (complement <$> readRegister rX)
 
 -- | Logical left shift of a 'Value' by the number of bits given in another 'Value'.
 shiftLL :: Value -> Value -> Value
@@ -279,70 +289,65 @@ shiftRA :: Value -> Value -> Value
 shiftRA a b = a `Std.shiftR` (fromIntegral b)
 
 -- | Instruction @sl rX, dmemaddr@ is implemented as @rX = rX << [dmemaddr]@.
-sl :: Register -> MemoryAddress -> Redfin ()
+sl :: Register -> MemoryAddress -> Redfin InstructionCode
 sl rX dmemaddr = writeRegister rX <~ (readRegister rX, shiftLL, readMemory dmemaddr)
 
 -- | Instruction @sl_i rX, uimm@ is implemented as @rX = rX << uimm@.
-sl_i :: Register -> UImm8 -> Redfin ()
+sl_i :: Register -> UImm8 -> Redfin InstructionCode
 sl_i rX uimm = writeRegister rX <~ (readRegister rX, shiftLL, pure $ unsignedValue uimm)
 
 -- | Instruction @sr rX, dmemaddr@ is implemented as @rX = rX >> [dmemaddr]@.
-sr :: Register -> MemoryAddress -> Redfin ()
+sr :: Register -> MemoryAddress -> Redfin InstructionCode
 sr rX dmemaddr = writeRegister rX <~ (readRegister rX, shiftRL, readMemory dmemaddr)
 
 -- | Instruction @sr_i rX, uimm@ is implemented as @rX = rX >> uimm@.
-sr_i :: Register -> UImm8 -> Redfin ()
+sr_i :: Register -> UImm8 -> Redfin InstructionCode
 sr_i rX uimm = writeRegister rX <~ (readRegister rX, shiftRL, pure $ unsignedValue uimm)
 
 -- | Instruction @sra rX, dmemaddr@ is implemented as @rX = (int)rX >> [dmemaddr]@.
-sra :: Register -> MemoryAddress -> Redfin ()
+sra :: Register -> MemoryAddress -> Redfin InstructionCode
 sra rX dmemaddr = writeRegister rX <~ (readRegister rX, shiftRA, readMemory dmemaddr)
 
 -- | Instruction @sra_i rX, uimm@ is implemented as @rX = (int)rX >> uimm@.
-sra_i :: Register -> UImm8 -> Redfin ()
+sra_i :: Register -> UImm8 -> Redfin InstructionCode
 sra_i rX uimm = writeRegister rX <~ (readRegister rX, shiftRA, pure $ unsignedValue uimm)
 
 -- | Instruction @cmpeq rX, dmemaddr@ is implemented as @cond = (rX == [dmemaddr])@.
-cmpeq :: Register -> MemoryAddress -> Redfin ()
+cmpeq :: Register -> MemoryAddress -> Redfin InstructionCode
 cmpeq rX dmemaddr = writeFlag Condition <~ (readRegister rX, (==), readMemory dmemaddr)
 
 -- | Instruction @cmplt rX, dmemaddr@ is implemented as @cond = (rX < [dmemaddr])@.
-cmplt :: Register -> MemoryAddress -> Redfin ()
+cmplt :: Register -> MemoryAddress -> Redfin InstructionCode
 cmplt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (<), readMemory dmemaddr)
 
 -- | Instruction @cmpgt rX, dmemaddr@ is implemented as @cond = (rX > [dmemaddr])@.
-cmpgt :: Register -> MemoryAddress -> Redfin ()
+cmpgt :: Register -> MemoryAddress -> Redfin InstructionCode
 cmpgt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (>), readMemory dmemaddr)
 
 -- | Instruction @ld_si rX, simm@ is implemented as @rx = (int)simm@.
-ld_si :: Register -> SImm8 -> Redfin ()
-ld_si rX simm = writeRegister rX $ signedValue simm
+ld_si :: Register -> SImm8 -> Redfin InstructionCode
+ld_si rX simm = withFetch $ writeRegister rX $ signedValue simm
 
 -- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
-ld_i :: Register -> UImm8 -> Redfin ()
-ld_i rX uimm = writeRegister rX $ unsignedValue uimm
+ld_i :: Register -> UImm8 -> Redfin InstructionCode
+ld_i rX uimm = withFetch $ writeRegister rX $ unsignedValue uimm
 
 -- | Instruction @ld rX, dmemaddr@ is implemented as @rx = [dmemaddr]@.
-ld :: Register -> MemoryAddress -> Redfin ()
-ld rX dmemaddr = writeRegister rX =<< readMemory dmemaddr
+ld :: Register -> MemoryAddress -> Redfin InstructionCode
+ld rX dmemaddr = withFetch $ writeRegister rX =<< readMemory dmemaddr
 
 -- | Instruction @ldmi rX, dmemaddr@ is implemented as @rx = [[dmemaddr]]@.
-ldmi :: Register -> MemoryAddress -> Redfin ()
-ldmi rX dmemaddr =
+ldmi :: Register -> MemoryAddress -> Redfin InstructionCode
+ldmi rX dmemaddr = withFetch $
     writeRegister rX =<< readMemory =<< toMemoryAddress =<< readMemory dmemaddr
 
 -- | Instruction @st rX, dmemaddr@ is implemented as @[dmemaddr] = rx@.
-st :: Register -> MemoryAddress -> Redfin ()
-st rX dmemaddr = writeMemory dmemaddr =<< readRegister rX
+st :: Register -> MemoryAddress -> Redfin InstructionCode
+st rX dmemaddr = withFetch $ writeMemory dmemaddr =<< readRegister rX
 
 -- | Instruction @stmi rX, dmemaddr@ is implemented as @[[dmemaddr]] = rx@.
-stmi :: Register -> MemoryAddress -> Redfin ()
-stmi rX dmemaddr = do
+stmi :: Register -> MemoryAddress -> Redfin InstructionCode
+stmi rX dmemaddr = withFetch $ do
     value   <- readRegister rX
     address <- toMemoryAddress =<< readMemory dmemaddr
     writeMemory address value
-
--- | A simple test program.
-testProgram :: Redfin ()
-testProgram = do
-    add R0 10
