@@ -16,6 +16,7 @@ source-repository head
 library
     hs-source-dirs:     src
     exposed-modules:    Redfin
+                        Redfin.InstructionSet
     build-depends:      base       >= 4.8 && < 5,
                         containers == 0.5.*,
                         extra      == 1.5.*,
