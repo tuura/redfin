@@ -13,6 +13,7 @@
 module Redfin where
 
 import Control.Monad
+import Control.Monad.Extra
 import qualified Data.Bits as Std
 import Data.Bits hiding (xor, shiftL, shiftR)
 import Data.Int
@@ -226,6 +227,7 @@ withFetch action = incrementInstructionCounter >> action >> fetchInstruction
     res $ x `op` y
 
 -- TODO: Set Overflow flag.
+-- TODO: Implement bus and EEPROM I/O instructions.
 -- TODO: Implement fixed-point instructions.
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
@@ -351,3 +353,21 @@ stmi rX dmemaddr = withFetch $ do
     value   <- readRegister rX
     address <- toMemoryAddress =<< readMemory dmemaddr
     writeMemory address value
+
+-- | Instruction @jmpi simm@ is implemented as
+-- @InstructionCounter = InstructionCounter + simm + 1@.
+jmpi :: SImm10 -> Redfin InstructionCode
+jmpi (SImm10 simm) = withFetch $ transformState $
+    \(State rs ic fs m p) -> State rs (ic + fromIntegral simm) fs m p
+
+-- | Instruction @jmpi_ct simm@ is implemented as
+-- @if Condition: InstructionCounter = InstructionCounter + simm + 1@.
+jmpi_ct :: SImm10 -> Redfin InstructionCode
+jmpi_ct (SImm10 simm) = withFetch $ whenM (readFlag Condition) $ transformState $
+    \(State rs ic fs m p) -> State rs (ic + fromIntegral simm) fs m p
+
+-- | Instruction @jmpi_cf simm@ is implemented as
+-- @if ¬Condition: InstructionCounter = InstructionCounter + simm + 1@.
+jmpi_cf :: SImm10 -> Redfin InstructionCode
+jmpi_cf (SImm10 simm) = withFetch $ unlessM (readFlag Condition) $ transformState $
+    \(State rs ic fs m p) -> State rs (ic + fromIntegral simm) fs m p
