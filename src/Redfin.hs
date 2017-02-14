@@ -100,6 +100,10 @@ data Flag = Condition    -- ^ Set by comparison instructions.
 -- | The state of flags is represented by a map from flags to their values.
 type Flags = Map Flag Bool
 
+-- | 'Clock' is the current time measured in clock cycles. It used to model the
+-- effect of the 'wait' instruction.
+newtype Clock = Clock Int64 deriving (Eq, Num, Show)
+
 -- | The 'State' of Redfin is fully characterised by the contents of the register
 -- bank, instruction counter, flags, memory and program. The latter is assumed
 -- to be unchanged throughout the program execution, however, it may technically
@@ -110,7 +114,8 @@ data State = State
     , instructionCounter :: InstructionAddress
     , flags              :: Flags
     , memory             :: Memory
-    , program            :: Program }
+    , program            :: Program
+    , clock              :: Clock }
 
 -- | The Redfin state transformer.
 data Redfin a = Redfin { execute :: (State -> (a, State)) } deriving Functor
@@ -137,6 +142,11 @@ writeState s = Redfin $ \_ -> ((), s)
 transformState :: (State -> State) -> Redfin ()
 transformState f = Redfin $ \s -> ((), f s)
 
+-- | Advance the clock by a given number of clock cycles.
+delay :: Clock -> Redfin ()
+delay cycles = transformState $
+    \(State rs ic fs m p c) -> State rs ic fs m p (c + cycles)
+
 -- | Lookup the 'Value' in a given 'Register'. If the register has never been
 -- initialised, this function returns 0, which is how the current hardware
 -- implementation works. To handle more general settings, it may also be useful
@@ -149,7 +159,7 @@ readRegister register = do
 -- | Write a new 'Value' to a given 'Register'.
 writeRegister :: Register -> Value -> Redfin ()
 writeRegister register value = transformState $
-    \(State rs ic fs m p) -> State (Map.insert register value rs) ic fs m p
+    \(State rs ic fs m p c) -> State (Map.insert register value rs) ic fs m p c
 
 -- | Lookup the 'Value' at the given 'MemoryAddress'. If the value has never been
 -- initialised, this function returns 0, which is how the current hardware
@@ -163,7 +173,7 @@ readMemory address = do
 -- | Write a new 'Value' to the given 'MemoryAddress'.
 writeMemory :: MemoryAddress -> Value -> Redfin ()
 writeMemory address value = transformState $
-    \(State rs ic fs m p) -> State rs ic fs (Map.insert address value m) p
+    \(State rs ic fs m p c) -> State rs ic fs (Map.insert address value m) p c
 
 -- | Convert a 'Value' to the 'MemoryAddress'. If the value needs to be
 -- truncated, the 'OutOfMemory' flag is set.
@@ -183,7 +193,7 @@ readFlag flag = do
 -- | Set a given 'Flag' to the specified Boolean value.
 writeFlag :: Flag -> Bool -> Redfin ()
 writeFlag flag value = transformState $
-    \(State rs ic fs m p) -> State rs ic (Map.insert flag value fs) m p
+    \(State rs ic fs m p c) -> State rs ic (Map.insert flag value fs) m p c
 
 -- | Lookup the 'InstructionCode' at the given 'InstructionAddress'. If the
 -- program has no code associated with the address, the function returns 0 and
@@ -201,12 +211,13 @@ readProgram address = do
 fetchInstruction :: Redfin InstructionCode
 fetchInstruction = do
     state <- readState
+    delay 1
     readProgram $ instructionCounter state
 
 -- | Increment the instruction counter.
 incrementInstructionCounter :: Redfin ()
 incrementInstructionCounter = transformState $
-    \(State rs ic fs m p) -> State rs (ic + 1) fs m p
+    \(State rs ic fs m p c) -> State rs (ic + 1) fs m p c
 
 -- | Each Redfin instruction starts by incrementing the instruction counter and
 -- ends by fetching the next instruction code. The 'withFetch' combinator can
@@ -229,6 +240,7 @@ withFetch action = incrementInstructionCounter >> action >> fetchInstruction
 -- TODO: Set Overflow flag.
 -- TODO: Implement bus and EEPROM I/O instructions.
 -- TODO: Implement fixed-point instructions.
+-- TODO: Model instruction delays accurately.
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 add :: Register -> MemoryAddress -> Redfin InstructionCode
@@ -358,16 +370,29 @@ stmi rX dmemaddr = withFetch $ do
 -- @InstructionCounter = InstructionCounter + simm + 1@.
 jmpi :: SImm10 -> Redfin InstructionCode
 jmpi (SImm10 simm) = withFetch $ transformState $
-    \(State rs ic fs m p) -> State rs (ic + fromIntegral simm) fs m p
+    \(State rs ic fs m p c) -> State rs (ic + fromIntegral simm) fs m p c
 
 -- | Instruction @jmpi_ct simm@ is implemented as
 -- @if Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_ct :: SImm10 -> Redfin InstructionCode
 jmpi_ct (SImm10 simm) = withFetch $ whenM (readFlag Condition) $ transformState $
-    \(State rs ic fs m p) -> State rs (ic + fromIntegral simm) fs m p
+    \(State rs ic fs m p c) -> State rs (ic + fromIntegral simm) fs m p c
 
 -- | Instruction @jmpi_cf simm@ is implemented as
 -- @if ¬Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_cf :: SImm10 -> Redfin InstructionCode
 jmpi_cf (SImm10 simm) = withFetch $ unlessM (readFlag Condition) $ transformState $
-    \(State rs ic fs m p) -> State rs (ic + fromIntegral simm) fs m p
+    \(State rs ic fs m p c) -> State rs (ic + fromIntegral simm) fs m p c
+
+-- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
+wait :: UImm10 -> Redfin InstructionCode
+wait (UImm10 uimm) = withFetch $ delay (fromIntegral uimm)
+
+-- | Do nothing apart from fetching the next instruction.
+nop :: Redfin InstructionCode
+nop = withFetch $ return ()
+
+-- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
+-- more meaningful implementation, for example, by raising the @Halt@ flag.
+halt :: Redfin InstructionCode
+halt = nop
