@@ -89,7 +89,11 @@ type Program = Map InstructionAddress InstructionCode
 -- | Boolean 'Flag's indicate the current status of Redfin.
 data Flag = Condition    -- ^ Set by comparison instructions.
           | Overflow     -- ^ Set when arithmetic overflow occurs.
-          | OutOfProgram -- ^ Set when the instruction counter goes outside program memory.
+          | OutOfMemory  -- ^ Set when the memory address exceeds the size of
+                         --   Redfin memory and needs to be truncated, e.g. see
+                         --   the 'ldmi' instruction.
+          | OutOfProgram -- ^ Set when the instruction counter goes outside
+                         --   program memory, e.g. after the 'jmpi' instruction.
           deriving (Eq, Ord, Show)
 
 -- | The state of flags is represented by a map from flags to their values.
@@ -194,6 +198,15 @@ incrementInstructionCounter :: Redfin ()
 incrementInstructionCounter = transformState $
     \(State rs ic fs m p) -> State rs (ic + 1) fs m p
 
+-- | Convert a 'Value' to the 'MemoryAddress'. If the value needs to be
+-- truncated, the 'OutOfMemory' flag is set.
+toMemoryAddress :: Value -> Redfin MemoryAddress
+toMemoryAddress value
+    | value < 256 = return $ fromIntegral value
+    | otherwise   = do
+        writeFlag OutOfMemory True
+        return $ fromIntegral (value .&. 255)
+
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition is @rX = rX + [dmemaddr]@.
 (<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin ()
@@ -295,8 +308,7 @@ cmpeq rX dmemaddr = writeFlag Condition <~ (readRegister rX, (==), readMemory dm
 
 -- | Instruction @cmplt rX, dmemaddr@ is implemented as @cond = (rX < [dmemaddr])@.
 cmplt :: Register -> MemoryAddress -> Redfin ()
-cmplt rX dmemaddr =
-    writeFlag Condition <~ (readRegister rX, (<), readMemory dmemaddr)
+cmplt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (<), readMemory dmemaddr)
 
 -- | Instruction @cmpgt rX, dmemaddr@ is implemented as @cond = (rX > [dmemaddr])@.
 cmpgt :: Register -> MemoryAddress -> Redfin ()
@@ -305,6 +317,30 @@ cmpgt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (>), readMemory dme
 -- | Instruction @ld_si rX, simm@ is implemented as @rx = (int)simm@.
 ld_si :: Register -> SImm8 -> Redfin ()
 ld_si rX simm = writeRegister rX $ signedValue simm
+
+-- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
+ld_i :: Register -> UImm8 -> Redfin ()
+ld_i rX uimm = writeRegister rX $ unsignedValue uimm
+
+-- | Instruction @ld rX, dmemaddr@ is implemented as @rx = [dmemaddr]@.
+ld :: Register -> MemoryAddress -> Redfin ()
+ld rX dmemaddr = writeRegister rX =<< readMemory dmemaddr
+
+-- | Instruction @ldmi rX, dmemaddr@ is implemented as @rx = [[dmemaddr]]@.
+ldmi :: Register -> MemoryAddress -> Redfin ()
+ldmi rX dmemaddr =
+    writeRegister rX =<< readMemory =<< toMemoryAddress =<< readMemory dmemaddr
+
+-- | Instruction @st rX, dmemaddr@ is implemented as @[dmemaddr] = rx@.
+st :: Register -> MemoryAddress -> Redfin ()
+st rX dmemaddr = writeMemory dmemaddr =<< readRegister rX
+
+-- | Instruction @stmi rX, dmemaddr@ is implemented as @[[dmemaddr]] = rx@.
+stmi :: Register -> MemoryAddress -> Redfin ()
+stmi rX dmemaddr = do
+    value   <- readRegister rX
+    address <- toMemoryAddress =<< readMemory dmemaddr
+    writeMemory address value
 
 -- | A simple test program.
 testProgram :: Redfin ()
