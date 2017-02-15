@@ -17,6 +17,8 @@ library
     hs-source-dirs:     src
     exposed-modules:    Redfin
                         Redfin.Decode
+                        Redfin.InstructionSet
+                        Redfin.Mnemonics
                         Redfin.Semantics
                         Redfin.Simulate
     build-depends:      base       >= 4.8 && < 5,

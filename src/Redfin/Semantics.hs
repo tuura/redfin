@@ -28,7 +28,7 @@ module Redfin.Semantics (
     jmpi, jmpi_ct, jmpi_cf,
 
     -- * Miscellaneous instructions
-    nop, wait, halt
+    wait, halt
     ) where
 
 import Control.Monad.Extra
@@ -199,10 +199,6 @@ jmpi_cf (SImm10 simm) = unlessM (readFlag Condition) $ transformState $
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()
 wait (UImm10 uimm) = delay (fromIntegral uimm)
-
--- | Do nothing apart from fetching the next instruction.
-nop :: Redfin ()
-nop = return ()
 
 -- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
 -- more meaningful implementation, for example, by raising the @Halt@ flag.

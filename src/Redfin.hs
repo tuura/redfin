@@ -16,7 +16,7 @@ module Redfin (
     UImm5 (..), UImm8 (..), UImm10 (..), SImm8 (..), SImm10 (..),
     Register (..), RegisterBank,
     MemoryAddress (..), Memory,
-    InstructionAddress (..), InstructionCode (..), Program,
+    InstructionAddress (..), InstructionCode (..), Opcode (..), Program,
     Flag (..), Flags,
     Clock (..),
     State (..),
@@ -31,7 +31,7 @@ module Redfin (
     readFlag, writeFlag,
     readProgram, readInstructionRegister, writeInstructionRegister,
     fetchInstruction, incrementInstructionCounter,
-    delay,
+    delay
     ) where
 
 import Control.Monad
@@ -85,13 +85,14 @@ instance SignedValue SImm8  where signedValue (SImm8  s) = fromIntegral s
 instance SignedValue SImm10 where signedValue (SImm10 s) = fromIntegral s
 
 -- | Redfin has 4 general-purpose registers 'R0' - 'R3'.
-data Register = R0 | R1 | R2 | R3 deriving (Eq, Ord, Show)
+data Register = R0 | R1 | R2 | R3 deriving (Enum, Eq, Ord, Show)
 
 -- | The register bank is represented by a map from registers to their values.
 type RegisterBank = Map Register Value
 
 -- | Redfin memory can hold 256 values.
-newtype MemoryAddress = MemoryAddress Word8 deriving (Eq, Num, Ord, Show)
+newtype MemoryAddress = MemoryAddress Word8
+    deriving (Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | The memory is represented by a map from memory addresses to their values.
 type Memory = Map MemoryAddress Value
@@ -102,6 +103,12 @@ newtype InstructionAddress = InstructionAddress Word16
 
 -- | Instructions have 16-bit codes.
 newtype InstructionCode = InstructionCode Word16
+    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
+
+-- | 'Opcode' is the leading 6-bit part of the 'InstructionCode', which
+-- determines the instruction. The remaining 10 bits of the 'InstructionCode'
+-- are used to specify immediate instruction arguments.
+newtype Opcode = Opcode Word8
     deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | The program is represented by a map from instruction addresses to codes.
