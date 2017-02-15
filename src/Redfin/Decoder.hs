@@ -30,7 +30,7 @@ import Redfin.InstructionSet
 --
 -- * Decode the instruction, extracting the opcode and immediate arguments.
 --
--- * Execute the instruction by calling an appropriate function from the
+-- * Execute the instruction by calling an appropriate implementation from the
 --   "Redfin.InstructionSet" module.
 executeInstruction :: Redfin ()
 executeInstruction = do

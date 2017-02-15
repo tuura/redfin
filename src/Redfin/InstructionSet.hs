@@ -40,27 +40,17 @@ import Data.Word
 
 import Redfin
 
--- TODO: Switch to Fetch -> Decode -> Execute cycle.
 -- TODO: Add DivisionByZero flag.
 -- TODO: Set Overflow flag.
 -- TODO: Implement bus and EEPROM I/O instructions.
 -- TODO: Implement fixed-point instructions.
--- TODO: Model instruction delays accurately.
-
--- | Each Redfin instruction starts by incrementing the instruction counter and
--- ends by fetching the next instruction code. The 'withFetch' combinator can
--- be used to wrap any given action with the increment and fetch steps, in
--- sequence. In future we may consider adding some parallelism, e.g. by
--- fetching the next instruction in parallel with the execution of the action.
-withFetch :: Redfin () -> Redfin ()
-withFetch action = incrementInstructionCounter >> action >> fetchInstruction
 
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
 --
 -- > add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
 (<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin ()
-(<~) res (arg1, op, arg2) = withFetch $ do
+(<~) res (arg1, op, arg2) = do
     x <- arg1
     y <- arg2
     res $ x `op` y
@@ -111,7 +101,7 @@ xor rX dmemaddr = writeRegister rX <~ (readRegister rX, Std.xor, readMemory dmem
 
 -- | Instruction @not rX, dmemaddr@ is implemented as @rX = ~rX@.
 not :: Register -> Redfin ()
-not rX = withFetch $ writeRegister rX =<< (complement <$> readRegister rX)
+not rX = writeRegister rX =<< (complement <$> readRegister rX)
 
 -- | Logical left shift of a 'Value' by the number of bits given in another 'Value'.
 shiftLL :: Value -> Value -> Value
@@ -163,28 +153,27 @@ cmpgt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (>), readMemory dme
 
 -- | Instruction @ld_si rX, simm@ is implemented as @rx = (int)simm@.
 ld_si :: Register -> SImm8 -> Redfin ()
-ld_si rX simm = withFetch $ writeRegister rX $ signedValue simm
+ld_si rX simm = writeRegister rX $ signedValue simm
 
 -- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
 ld_i :: Register -> UImm8 -> Redfin ()
-ld_i rX uimm = withFetch $ writeRegister rX $ unsignedValue uimm
+ld_i rX uimm = writeRegister rX $ unsignedValue uimm
 
 -- | Instruction @ld rX, dmemaddr@ is implemented as @rx = [dmemaddr]@.
 ld :: Register -> MemoryAddress -> Redfin ()
-ld rX dmemaddr = withFetch $ writeRegister rX =<< readMemory dmemaddr
+ld rX dmemaddr = writeRegister rX =<< readMemory dmemaddr
 
 -- | Instruction @ldmi rX, dmemaddr@ is implemented as @rx = [[dmemaddr]]@.
 ldmi :: Register -> MemoryAddress -> Redfin ()
-ldmi rX dmemaddr = withFetch $
-    writeRegister rX =<< readMemory =<< toMemoryAddress =<< readMemory dmemaddr
+ldmi rX dmemaddr =     writeRegister rX =<< readMemory =<< toMemoryAddress =<< readMemory dmemaddr
 
 -- | Instruction @st rX, dmemaddr@ is implemented as @[dmemaddr] = rx@.
 st :: Register -> MemoryAddress -> Redfin ()
-st rX dmemaddr = withFetch $ writeMemory dmemaddr =<< readRegister rX
+st rX dmemaddr = writeMemory dmemaddr =<< readRegister rX
 
 -- | Instruction @stmi rX, dmemaddr@ is implemented as @[[dmemaddr]] = rx@.
 stmi :: Register -> MemoryAddress -> Redfin ()
-stmi rX dmemaddr = withFetch $ do
+stmi rX dmemaddr = do
     value   <- readRegister rX
     address <- toMemoryAddress =<< readMemory dmemaddr
     writeMemory address value
@@ -192,28 +181,28 @@ stmi rX dmemaddr = withFetch $ do
 -- | Instruction @jmpi simm@ is implemented as
 -- @InstructionCounter = InstructionCounter + simm + 1@.
 jmpi :: SImm10 -> Redfin ()
-jmpi (SImm10 simm) = withFetch $ transformState $
+jmpi (SImm10 simm) = transformState $
     \(State rs ic ir fs m p c) -> State rs (ic + fromIntegral simm) ir fs m p c
 
 -- | Instruction @jmpi_ct simm@ is implemented as
 -- @if Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_ct :: SImm10 -> Redfin ()
-jmpi_ct (SImm10 simm) = withFetch $ whenM (readFlag Condition) $ transformState $
+jmpi_ct (SImm10 simm) = whenM (readFlag Condition) $ transformState $
     \(State rs ic ir fs m p c) -> State rs (ic + fromIntegral simm) ir fs m p c
 
 -- | Instruction @jmpi_cf simm@ is implemented as
 -- @if ¬Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_cf :: SImm10 -> Redfin ()
-jmpi_cf (SImm10 simm) = withFetch $ unlessM (readFlag Condition) $ transformState $
+jmpi_cf (SImm10 simm) = unlessM (readFlag Condition) $ transformState $
     \(State rs ic ir fs m p c) -> State rs (ic + fromIntegral simm) ir fs m p c
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()
-wait (UImm10 uimm) = withFetch $ delay (fromIntegral uimm)
+wait (UImm10 uimm) = delay (fromIntegral uimm)
 
 -- | Do nothing apart from fetching the next instruction.
 nop :: Redfin ()
-nop = withFetch $ return ()
+nop = return ()
 
 -- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
 -- more meaningful implementation, for example, by raising the @Halt@ flag.

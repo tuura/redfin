@@ -42,6 +42,7 @@ import Data.Map.Strict (Map)
 import Data.Word
 
 -- TODO: Add Halt flag.
+-- TODO: Model instruction delays accurately.
 
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
@@ -65,9 +66,9 @@ newtype UImm10 = UImm10 Word16 deriving (Eq, Num, Ord, Show)
 class UnsignedValue a where
     unsignedValue :: a -> Value
 
-instance UnsignedValue UImm5  where unsignedValue (UImm5  x) = fromIntegral x
-instance UnsignedValue UImm8  where unsignedValue (UImm8  x) = fromIntegral x
-instance UnsignedValue UImm10 where unsignedValue (UImm10 x) = fromIntegral x
+instance UnsignedValue UImm5  where unsignedValue (UImm5  u) = fromIntegral u
+instance UnsignedValue UImm8  where unsignedValue (UImm8  u) = fromIntegral u
+instance UnsignedValue UImm10 where unsignedValue (UImm10 u) = fromIntegral u
 
 -- | The 'SImm8' datatype represents 8-bit signed immediate arguments that are
 -- used by many Redfin instructions with immediate addressing mode.
@@ -83,8 +84,8 @@ newtype SImm10 = SImm10 Word16 deriving (Eq, Num, Ord, Show)
 class SignedValue a where
     signedValue :: a -> Value
 
-instance SignedValue SImm8  where signedValue (SImm8  x) = fromIntegral x
-instance SignedValue SImm10 where signedValue (SImm10 x) = fromIntegral x
+instance SignedValue SImm8  where signedValue (SImm8  s) = fromIntegral s
+instance SignedValue SImm10 where signedValue (SImm10 s) = fromIntegral s
 
 -- | Redfin has 4 general-purpose registers 'R0' - 'R3'.
 data Register = R0 | R1 | R2 | R3 deriving (Eq, Ord, Show)
