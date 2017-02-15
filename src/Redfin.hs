@@ -42,7 +42,6 @@ import Data.Map.Strict (Map)
 import Data.Word
 
 -- TODO: Add Halt flag.
--- TODO: Model instruction delays accurately.
 
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
@@ -174,8 +173,8 @@ transformState f = Redfin $ \s -> ((), f s)
 
 -- | Advance the clock by a given number of clock cycles.
 delay :: Clock -> Redfin ()
-delay cycles = transformState $
-    \(State rs ic ir fs m p c) -> State rs ic ir fs m p (c + cycles)
+delay cycles = transformState $ \(State rs ic ir fs m p  c         )
+                               -> State rs ic ir fs m p (c + cycles)
 
 -- | Lookup the 'Value' in a given 'Register'. If the register has never been
 -- initialised, this function returns 0, which is how the current hardware
@@ -188,22 +187,28 @@ readRegister register = do
 
 -- | Write a new 'Value' to a given 'Register'.
 writeRegister :: Register -> Value -> Redfin ()
-writeRegister register value = transformState $
-    \(State rs ic ir fs m p c) -> State (Map.insert register value rs) ic ir fs m p c
+writeRegister register value =
+    transformState $ \(State                            rs  ic ir fs m p c)
+                    -> State (Map.insert register value rs) ic ir fs m p c
 
 -- | Lookup the 'Value' at the given 'MemoryAddress'. If the value has never been
 -- initialised, this function returns 0, which is how the current hardware
 -- implementation works. To handle more general settings, it may also be useful
--- to raise an error flag in this situation (future work).
+-- to raise an error flag in this situation (future work). We assume that it
+-- takes 1 clock cycle to access the memory in hardware.
 readMemory :: MemoryAddress -> Redfin Value
 readMemory address = do
     state <- readState
+    delay 1
     return $ Map.findWithDefault 0 address (memory state)
 
--- | Write a new 'Value' to the given 'MemoryAddress'.
+-- | Write a new 'Value' to the given 'MemoryAddress'. We assume that it takes 1
+-- clock cycle to access the memory in hardware.
 writeMemory :: MemoryAddress -> Value -> Redfin ()
-writeMemory address value = transformState $
-    \(State rs ic ir fs m p c) -> State rs ic ir fs (Map.insert address value m) p c
+writeMemory address value = do
+    delay 1
+    transformState $ \(State rs ic ir fs                           m  p c)
+                    -> State rs ic ir fs (Map.insert address value m) p c
 
 -- | Convert a 'Value' to the 'MemoryAddress'. If the value needs to be
 -- truncated, the 'OutOfMemory' flag is set.
@@ -222,15 +227,18 @@ readFlag flag = do
 
 -- | Set a given 'Flag' to the specified Boolean value.
 writeFlag :: Flag -> Bool -> Redfin ()
-writeFlag flag value = transformState $
-    \(State rs ic ir fs m p c) -> State rs ic ir (Map.insert flag value fs) m p c
+writeFlag flag value =
+    transformState $ \(State rs ic ir                        fs  m p c)
+                    -> State rs ic ir (Map.insert flag value fs) m p c
 
 -- | Lookup the 'InstructionCode' at the given 'InstructionAddress'. If the
 -- program has no code associated with the address, the function returns 0 and
--- raises the 'OutOfProgram' error flag.
+-- raises the 'OutOfProgram' error flag. We assume that it takes 1 clock cycle
+-- to access the program memory in hardware.
 readProgram :: InstructionAddress -> Redfin InstructionCode
 readProgram address = do
     state <- readState
+    delay 1
     case Map.lookup address (program state) of
         Just code -> return code
         Nothing -> do
@@ -243,13 +251,12 @@ readProgram address = do
 fetchInstruction :: Redfin ()
 fetchInstruction = do
     state <- readState
-    delay 1
     writeInstructionRegister =<< readProgram (instructionCounter state)
 
 -- | Increment the instruction counter.
 incrementInstructionCounter :: Redfin ()
-incrementInstructionCounter = transformState $
-    \(State rs ic ir fs m p c) -> State rs (ic + 1) ir fs m p c
+incrementInstructionCounter = transformState $ \(State rs  ic      ir fs m p c)
+                                              -> State rs (ic + 1) ir fs m p c
 
 -- | Read the instruction register.
 readInstructionRegister :: Redfin InstructionCode
@@ -257,6 +264,7 @@ readInstructionRegister = instructionRegister <$> readState
 
 -- | Write a given 'InstructionCode' to the instruction register.
 writeInstructionRegister :: InstructionCode -> Redfin ()
-writeInstructionRegister instructionCode = transformState $
-    \(State rs ic _ fs m p c) -> State rs ic instructionCode fs m p c
+writeInstructionRegister instructionCode =
+    transformState $ \(State rs ic _               fs m p c)
+                    -> State rs ic instructionCode fs m p c
 
