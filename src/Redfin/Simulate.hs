@@ -16,7 +16,7 @@ module Redfin.Simulate (
 import qualified Data.Map.Strict as Map
 
 import Redfin
-import Redfin.Decoder
+import Redfin.Decode
 
 -- | A predicate on Redfin states to determine when to terminate the simulation.
 type TerminationCondition = State -> Bool

@@ -19,7 +19,7 @@ import Data.Word
 import Prelude hiding (and, div, not, or)
 
 import Redfin
-import Redfin.InstructionSet
+import Redfin.Semantics
 
 -- | Execute the instruction pointed to by the instruction counter, performing
 -- the following steps in sequence:

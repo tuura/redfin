@@ -47,7 +47,7 @@ newtype Value = Value Int64
     deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | The 'UImm5' datatype represents 5-bit unsigned immediate arguments that are
--- used by the 'Redfin.InstructionSet.pmac' instruction.
+-- used by the 'Redfin.Semantics.pmac' instruction.
 newtype UImm5 = UImm5 Word8 deriving (Eq, Num, Ord, Show)
 
 -- | The 'UImm8' datatype represents 8-bit unsigned immediate arguments that are
@@ -55,7 +55,7 @@ newtype UImm5 = UImm5 Word8 deriving (Eq, Num, Ord, Show)
 newtype UImm8 = UImm8 Word8 deriving (Eq, Num, Ord, Show)
 
 -- | The 'UImm10' datatype represents 10-bit unsigned immediate arguments that
--- are used by the 'Redfin.InstructionSet.wait' instruction.
+-- are used by the 'Redfin.Semantics.wait' instruction.
 newtype UImm10 = UImm10 Word16 deriving (Eq, Num, Ord, Show)
 
 -- | Extend an unsigned integer to 'Value'. The latter must be wide enough to
@@ -73,7 +73,7 @@ newtype SImm8 = SImm8 Word8 deriving (Eq, Num, Ord, Show)
 
 -- | The 'SImm10' datatype represents 10-bit signed immediate arguments that are
 -- used for specifying the relative jump address, e.g. in
--- 'Redfin.InstructionSet.jmpi' instruction.
+-- 'Redfin.Semantics.jmpi' instruction.
 newtype SImm10 = SImm10 Word16 deriving (Eq, Num, Ord, Show)
 
 -- | Extend a signed integer to 'Value' applying sign extension. 'Value' must be
@@ -113,15 +113,15 @@ data Flag = Condition
           | IllegalInstruction
           -- ^ Set by the instruction decoder, see "Redfin.Decoder".
           | Halt
-          -- ^ Set by the 'Redfin.InstructionSet.halt' instruction, indicating
+          -- ^ Set by the 'Redfin.Semantics.halt' instruction, indicating
           --   that the program execution must be terminated.
           | OutOfMemory
            -- ^ Set when the memory address exceeds the size of Redfin memory
            -- and needs to be truncated, e.g. see the
-           -- 'Redfin.InstructionSet.ldmi' instruction.
+           -- 'Redfin.Semantics.ldmi' instruction.
           | OutOfProgram
           -- ^ Set when the instruction counter goes outside program memory,
-          -- e.g. after the 'Redfin.InstructionSet.jmpi' instruction.
+          -- e.g. after the 'Redfin.Semantics.jmpi' instruction.
           | Overflow
           -- ^ Set when arithmetic overflow occurs.
           deriving (Eq, Ord, Show)
@@ -130,7 +130,7 @@ data Flag = Condition
 type Flags = Map Flag Bool
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
--- effect of the 'Redfin.InstructionSet.wait' instruction.
+-- effect of the 'Redfin.Semantics.wait' instruction.
 newtype Clock = Clock Int64 deriving (Eq, Num, Show)
 
 -- | The 'State' of Redfin is fully characterised by the contents of the register

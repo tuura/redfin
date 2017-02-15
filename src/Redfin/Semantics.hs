@@ -1,21 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin.InstructionSet
+-- Module      :  Redfin.Semantics
 -- Copyright   :  (c) Andrey Mokhov 2017
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
 -- Stability   :  experimental
 --
--- REDFIN instruction set.
+-- Semantics of REDFIN instructions.
 --
 -----------------------------------------------------------------------------
-module Redfin.InstructionSet (
+module Redfin.Semantics (
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
 
     -- * Logical bit-wise instructions
-    Redfin.InstructionSet.and, Redfin.InstructionSet.or,
-    Redfin.InstructionSet.xor, Redfin.InstructionSet.not,
+    Redfin.Semantics.and, Redfin.Semantics.or,
+    Redfin.Semantics.xor, Redfin.Semantics.not,
     sl, sl_i, sr, sr_i, sra, sra_i,
 
     -- * Load/store instructions
