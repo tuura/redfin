@@ -148,7 +148,7 @@ data State = State
     , clock               :: Clock }
 
 -- | The Redfin state transformer.
-data Redfin a = Redfin { execute :: (State -> (a, State)) } deriving Functor
+data Redfin a = Redfin { redfin :: (State -> (a, State)) } deriving Functor
 
 -- | A standard 'Applicative' instance available for any 'Monad'.
 instance Applicative Redfin where
@@ -158,7 +158,7 @@ instance Applicative Redfin where
 -- | A standard state 'Monad'.
 instance Monad Redfin where
     return a       = Redfin $ \s -> (a, s)
-    Redfin r >>= f = Redfin $ \s -> let (a, s') = r s in execute (f a) s'
+    Redfin r >>= f = Redfin $ \s -> let (a, s') = r s in redfin (f a) s'
 
 -- | Read the current 'State'.
 readState :: Redfin State

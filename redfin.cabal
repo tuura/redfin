@@ -18,6 +18,7 @@ library
     exposed-modules:    Redfin
                         Redfin.Decoder
                         Redfin.InstructionSet
+                        Redfin.Simulate
     build-depends:      base       >= 4.8 && < 5,
                         containers == 0.5.*,
                         extra      == 1.5.*,
