@@ -41,8 +41,6 @@ import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Word
 
--- TODO: Add Halt flag.
-
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
 newtype Value = Value Int64
@@ -114,6 +112,9 @@ data Flag = Condition
           -- ^ Set by comparison instructions.
           | IllegalInstruction
           -- ^ Set by the instruction decoder, see "Redfin.Decoder".
+          | Halt
+          -- ^ Set by the 'Redfin.InstructionSet.halt' instruction, indicating
+          --   that the program execution must be terminated.
           | OutOfMemory
            -- ^ Set when the memory address exceeds the size of Redfin memory
            -- and needs to be truncated, e.g. see the
@@ -219,7 +220,8 @@ toMemoryAddress value
         writeFlag OutOfMemory True
         return $ fromIntegral (value .&. 255)
 
--- | Lookup the value of a given 'Flag'. Flags are initialised to 'False'.
+-- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
+-- any value, it is assumed to be 'False'.
 readFlag :: Flag -> Redfin Bool
 readFlag flag = do
     state <- readState

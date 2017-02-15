@@ -207,4 +207,4 @@ nop = return ()
 -- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
 -- more meaningful implementation, for example, by raising the @Halt@ flag.
 halt :: Redfin ()
-halt = nop
+halt = writeFlag Halt True
