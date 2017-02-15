@@ -16,7 +16,7 @@ source-repository head
 library
     hs-source-dirs:     src
     exposed-modules:    Redfin
-                        Redfin.Decoder
+                        Redfin.Decode
                         Redfin.InstructionSet
                         Redfin.Simulate
     build-depends:      base       >= 4.8 && < 5,

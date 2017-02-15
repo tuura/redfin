@@ -1,7 +1,7 @@
 {-# LANGUAGE BinaryLiterals #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin.Decoder
+-- Module      :  Redfin.Decode
 -- Copyright   :  (c) Andrey Mokhov 2017
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
@@ -10,7 +10,7 @@
 -- Decoding and executing REDFIN instructions.
 --
 -----------------------------------------------------------------------------
-module Redfin.Decoder (executeInstruction) where
+module Redfin.Decode (executeInstruction) where
 
 import Data.Bits hiding (bit, xor)
 import qualified Data.Map.Strict as Map
