@@ -2,25 +2,25 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin.Mnemonics
+-- Module      :  Redfin.Assembly
 -- Copyright   :  (c) Andrey Mokhov 2017
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
 -- Stability   :  experimental
 --
--- Mnemonics of REDFIN instructions.
+-- An embedded REDFIN assembly language.
 --
 -----------------------------------------------------------------------------
-module Redfin.Mnemonics (
-    -- * Mnemonics writer monad
-    Writer (..), firstCode,
+module Redfin.Assembly (
+    -- * Assembly scripts and assembler
+    Script (..), assemble, firstCode,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
 
     -- * Logical bit-wise instructions
-    Redfin.Mnemonics.and, Redfin.Mnemonics.or,
-    Redfin.Mnemonics.xor, Redfin.Mnemonics.not,
+    Redfin.Assembly.and, Redfin.Assembly.or,
+    Redfin.Assembly.xor, Redfin.Assembly.not,
     sl, sl_i, sr, sr_i, sra, sra_i,
 
     -- * Load/store instructions
@@ -43,24 +43,27 @@ import Prelude hiding (and, div, not, or)
 
 import Redfin
 
--- | A simple program writer monad.
-data Writer a = Writer { runWriter :: (Program -> (a, Program)) } deriving Functor
+-- | An assembly writer monad.
+data Script a = Script { runScript :: (Program -> (a, Program)) } deriving Functor
 
-instance Applicative Writer where
+assemble :: Script () -> Program
+assemble s = snd $ runScript s Map.empty
+
+instance Applicative Script where
     pure  = return
     (<*>) = ap
 
-instance Monad Writer where
-    return a       = Writer $ \p -> (a, p)
-    Writer w >>= f = Writer $ \p -> let (a, p') = w p in runWriter (f a) p'
+instance Monad Script where
+    return a       = Script $ \p -> (a, p)
+    Script w >>= f = Script $ \p -> let (a, p') = w p in runScript (f a) p'
 
-write :: InstructionCode -> Writer ()
-write code = Writer $ \p -> ((), Map.insert (fromIntegral $ Map.size p) code p)
+write :: InstructionCode -> Script ()
+write code = Script $ \p -> ((), Map.insert (fromIntegral $ Map.size p) code p)
 
--- | Extract the first 'InstrctionCode' from the program written by the given
--- mnemonics 'Writer'. Raise an error if the resulting program is empty.
-firstCode :: Writer () -> InstructionCode
-firstCode w = Map.findWithDefault (error "Empty program") 0 (snd $ runWriter w Map.empty)
+-- | Extract the first 'InstrctionCode' from the given program 'Script'. Raise
+-- an error if the script is empty.
+firstCode :: Script () -> InstructionCode
+firstCode s = Map.findWithDefault (error "Empty script") 0 (assemble s)
 
 and   rX dmemaddr = write $ opcode 0b000001 + register rX + address dmemaddr
 or    rX dmemaddr = write $ opcode 0b000010 + register rX + address dmemaddr
