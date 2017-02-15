@@ -47,6 +47,24 @@ import Redfin
 -- TODO: Implement fixed-point instructions.
 -- TODO: Model instruction delays accurately.
 
+-- | Each Redfin instruction starts by incrementing the instruction counter and
+-- ends by fetching the next instruction code. The 'withFetch' combinator can
+-- be used to wrap any given action with the increment and fetch steps, in
+-- sequence. In future we may consider adding some parallelism, e.g. by
+-- fetching the next instruction in parallel with the execution of the action.
+withFetch :: Redfin () -> Redfin ()
+withFetch action = incrementInstructionCounter >> action >> fetchInstruction
+
+-- | A convenient combinator for defining instructions that fit the pattern
+-- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
+--
+-- > add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
+(<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin ()
+(<~) res (arg1, op, arg2) = withFetch $ do
+    x <- arg1
+    y <- arg2
+    res $ x `op` y
+
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 add :: Register -> MemoryAddress -> Redfin ()
 add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)

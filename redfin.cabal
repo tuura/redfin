@@ -16,6 +16,7 @@ source-repository head
 library
     hs-source-dirs:     src
     exposed-modules:    Redfin
+                        Redfin.Decoder
                         Redfin.InstructionSet
     build-depends:      base       >= 4.8 && < 5,
                         containers == 0.5.*,
@@ -27,5 +28,6 @@ library
                         ScopedTypeVariables
                         TupleSections
                         TypeFamilies
-    other-extensions:   DeriveFunctor
+    other-extensions:   BinaryLiterals
+                        DeriveFunctor
     GHC-options:        -O2 -Wall -fwarn-tabs

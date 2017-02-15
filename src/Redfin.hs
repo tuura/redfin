@@ -30,9 +30,8 @@ module Redfin (
     readMemory, writeMemory,
     readFlag, writeFlag,
     readProgram, readInstructionRegister, writeInstructionRegister,
-    fetchInstruction, incrementInstructionCounter, withFetch,
+    fetchInstruction, incrementInstructionCounter,
     delay,
-    (<~)
     ) where
 
 import Control.Monad
@@ -41,6 +40,8 @@ import Data.Int
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Word
+
+-- TODO: Add Halt flag.
 
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
@@ -102,20 +103,26 @@ newtype InstructionAddress = InstructionAddress Word16
     deriving (Eq, Num, Ord, Show)
 
 -- | Instructions have 16-bit codes.
-newtype InstructionCode = InstructionCode Word16 deriving (Eq, Num, Show)
+newtype InstructionCode = InstructionCode Word16
+    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | The program is represented by a map from instruction addresses to codes.
 type Program = Map InstructionAddress InstructionCode
 
 -- | Boolean 'Flag's indicate the current status of Redfin.
-data Flag = Condition    -- ^ Set by comparison instructions.
-          | Overflow     -- ^ Set when arithmetic overflow occurs.
-          | OutOfMemory  -- ^ Set when the memory address exceeds the size of
-                         --   Redfin memory and needs to be truncated, e.g. see
-                         --   the 'Redfin.InstructionSet.ldmi' instruction.
-          | OutOfProgram -- ^ Set when the instruction counter goes outside
-                         --   program memory, e.g. after the
-                         --   'Redfin.InstructionSet.jmpi' instruction.
+data Flag = Condition
+          -- ^ Set by comparison instructions.
+          | IllegalInstruction
+          -- ^ Set by the instruction decoder, see "Redfin.Decoder".
+          | OutOfMemory
+           -- ^ Set when the memory address exceeds the size of Redfin memory
+           -- and needs to be truncated, e.g. see the
+           -- 'Redfin.InstructionSet.ldmi' instruction.
+          | OutOfProgram
+          -- ^ Set when the instruction counter goes outside program memory,
+          -- e.g. after the 'Redfin.InstructionSet.jmpi' instruction.
+          | Overflow
+          -- ^ Set when arithmetic overflow occurs.
           deriving (Eq, Ord, Show)
 
 -- | The state of flags is represented by a map from flags to their values.
@@ -252,20 +259,3 @@ writeInstructionRegister :: InstructionCode -> Redfin ()
 writeInstructionRegister instructionCode = transformState $
     \(State rs ic _ fs m p c) -> State rs ic instructionCode fs m p c
 
--- | Each Redfin instruction starts by incrementing the instruction counter and
--- ends by fetching the next instruction code. The 'withFetch' combinator can
--- be used to wrap any given action with the increment and fetch steps, in
--- sequence. In future we may consider adding some parallelism, e.g. by
--- fetching the next instruction in parallel with the execution of the action.
-withFetch :: Redfin () -> Redfin ()
-withFetch action = incrementInstructionCounter >> action >> fetchInstruction
-
--- | A convenient combinator for defining instructions that fit the pattern
--- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
---
--- > add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
-(<~) :: (c -> Redfin ()) -> (Redfin a, a -> b -> c, Redfin b) -> Redfin ()
-(<~) res (arg1, op, arg2) = withFetch $ do
-    x <- arg1
-    y <- arg2
-    res $ x `op` y
