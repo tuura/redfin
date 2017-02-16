@@ -43,6 +43,8 @@ import Prelude hiding (and, div, not, or)
 
 import Redfin
 
+-- TODO: Get rid of ad-hoc fromIntegral.
+
 -- | An assembly writer monad.
 data Script a = Script { runScript :: (Program -> (a, Program)) } deriving Functor
 
@@ -103,7 +105,7 @@ not rX = write $ opcode 0b111000 + register rX
 halt   = write $ opcode 0b000000
 
 opcode :: Opcode -> InstructionCode
-opcode o = fromIntegral $ shiftL o 10
+opcode o = shiftL (fromIntegral o) 10
 
 register :: Register -> InstructionCode
 register r = fromIntegral $ shiftL (fromEnum r) 8
@@ -112,13 +114,13 @@ address :: MemoryAddress -> InstructionCode
 address = fromIntegral
 
 simm8 :: SImm8 -> InstructionCode
-simm8 (SImm8 s) = fromIntegral s
+simm8 (SImm8 s) = fromIntegral s .&. 255
 
 uimm8 :: UImm8 -> InstructionCode
 uimm8 (UImm8 u) = fromIntegral u
 
 simm10 :: SImm10 -> InstructionCode
-simm10 (SImm10 s)= fromIntegral s
+simm10 (SImm10 s) = fromIntegral s .&. 1023
 
 uimm10 :: UImm10 -> InstructionCode
-uimm10 (UImm10 u)= fromIntegral u
+uimm10 (UImm10 u) = fromIntegral u

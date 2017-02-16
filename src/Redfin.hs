@@ -79,7 +79,7 @@ newtype SImm10 = SImm10 Word16 deriving (Eq, Num, Ord, Show)
 -- | Extend a signed integer to 'Value' applying sign extension. 'Value' must be
 -- wide enough to represent the given integer with no loss of information.
 class SignedValue a where
-    signedValue :: a -> Value
+    signedValue    :: a -> Value
 
 instance SignedValue SImm8  where signedValue (SImm8  s) = fromIntegral s
 instance SignedValue SImm10 where signedValue (SImm10 s) = fromIntegral s
@@ -99,7 +99,7 @@ type Memory = Map MemoryAddress Value
 
 -- | Programs are stored in program memory (currently, up to 1024 instructions).
 newtype InstructionAddress = InstructionAddress Word16
-    deriving (Eq, Num, Ord, Show)
+    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | Instructions have 16-bit codes.
 newtype InstructionCode = InstructionCode Word16
@@ -153,6 +153,7 @@ data State = State
     , memory              :: Memory
     , program             :: Program
     , clock               :: Clock }
+    deriving (Eq, Show)
 
 -- | The Redfin state transformer.
 data Redfin a = Redfin { redfin :: (State -> (a, State)) } deriving Functor

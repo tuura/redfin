@@ -165,7 +165,7 @@ ld rX dmemaddr = writeRegister rX =<< readMemory dmemaddr
 
 -- | Instruction @ldmi rX, dmemaddr@ is implemented as @rx = [[dmemaddr]]@.
 ldmi :: Register -> MemoryAddress -> Redfin ()
-ldmi rX dmemaddr =     writeRegister rX =<< readMemory =<< toMemoryAddress =<< readMemory dmemaddr
+ldmi rX dmemaddr = writeRegister rX =<< readMemory =<< toMemoryAddress =<< readMemory dmemaddr
 
 -- | Instruction @st rX, dmemaddr@ is implemented as @[dmemaddr] = rx@.
 st :: Register -> MemoryAddress -> Redfin ()
@@ -181,20 +181,19 @@ stmi rX dmemaddr = do
 -- | Instruction @jmpi simm@ is implemented as
 -- @InstructionCounter = InstructionCounter + simm + 1@.
 jmpi :: SImm10 -> Redfin ()
-jmpi (SImm10 simm) = transformState $
-    \(State rs ic ir fs m p c) -> State rs (ic + fromIntegral simm) ir fs m p c
+jmpi (SImm10 simm) =
+    transformState $ \(State rs   ic                                ir fs m p c)
+                    -> State rs ((ic + fromIntegral simm) .&. 1023) ir fs m p c
 
 -- | Instruction @jmpi_ct simm@ is implemented as
 -- @if Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_ct :: SImm10 -> Redfin ()
-jmpi_ct (SImm10 simm) = whenM (readFlag Condition) $ transformState $
-    \(State rs ic ir fs m p c) -> State rs (ic + fromIntegral simm) ir fs m p c
+jmpi_ct = whenM (readFlag Condition) . jmpi
 
 -- | Instruction @jmpi_cf simm@ is implemented as
 -- @if ¬Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_cf :: SImm10 -> Redfin ()
-jmpi_cf (SImm10 simm) = unlessM (readFlag Condition) $ transformState $
-    \(State rs ic ir fs m p c) -> State rs (ic + fromIntegral simm) ir fs m p c
+jmpi_cf = unlessM (readFlag Condition) . jmpi
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()

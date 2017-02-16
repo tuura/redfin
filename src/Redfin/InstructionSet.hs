@@ -84,8 +84,8 @@ typeH :: Map Opcode (UImm5 -> UImm5 -> Redfin ())
 typeH = Map.empty
 
 at :: InstructionCode -> (Int, Int) -> Int
-at code (high, low) = let bits = reverse [low..high] in
-    foldr (\bit res -> res * 2 + if testBit code bit then 1 else 0) 0 bits
+at code (high, low) =
+    foldr (\bit res -> res * 2 + if testBit code bit then 1 else 0) 0 [low..high]
 
 getOpcode :: A.Script () -> Opcode
 getOpcode = decodeOpcode . A.firstCode
