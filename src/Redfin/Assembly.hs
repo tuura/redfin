@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 module Redfin.Assembly (
     -- * Assembly scripts and assembler
-    Script (..), assemble, firstCode,
+    Script, assemble, firstCode,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -46,25 +46,27 @@ import Redfin
 -- TODO: Get rid of ad-hoc fromIntegral.
 
 -- | An assembly writer monad.
-data Script a = Script { runScript :: (Program -> (a, Program)) } deriving Functor
+data Writer a = Writer { runWriter :: (Program -> (a, Program)) } deriving Functor
 
-assemble :: Script () -> Program
-assemble s = snd $ runScript s Map.empty
+type Script = Writer ()
 
-instance Applicative Script where
+assemble :: Script -> Program
+assemble s = snd $ runWriter s Map.empty
+
+instance Applicative Writer where
     pure  = return
     (<*>) = ap
 
-instance Monad Script where
-    return a       = Script $ \p -> (a, p)
-    Script w >>= f = Script $ \p -> let (a, p') = w p in runScript (f a) p'
+instance Monad Writer where
+    return a       = Writer $ \p -> (a, p)
+    Writer w >>= f = Writer $ \p -> let (a, p') = w p in runWriter (f a) p'
 
-write :: InstructionCode -> Script ()
-write code = Script $ \p -> ((), Map.insert (fromIntegral $ Map.size p) code p)
+write :: InstructionCode -> Script
+write code = Writer $ \p -> ((), Map.insert (fromIntegral $ Map.size p) code p)
 
 -- | Extract the first 'InstrctionCode' from the given program 'Script'. Raise
 -- an error if the script is empty.
-firstCode :: Script () -> InstructionCode
+firstCode :: Script -> InstructionCode
 firstCode s = Map.findWithDefault (error "Empty script") 0 (assemble s)
 
 and   rX dmemaddr = write $ opcode 0b000001 + register rX + address dmemaddr

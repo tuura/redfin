@@ -4,7 +4,7 @@ import Redfin hiding (memory, program)
 import Redfin.Assembly
 import Redfin.Simulate
 
-script :: Script ()
+script :: Script
 script = do
     ld_i R0 0    -- Set R0 to 0 (result).
     ld_i R1 1    -- Set R1 to 1 (counter).

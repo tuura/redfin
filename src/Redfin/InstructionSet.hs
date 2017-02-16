@@ -87,7 +87,7 @@ at :: InstructionCode -> (Int, Int) -> Int
 at code (high, low) =
     foldr (\bit res -> res * 2 + if testBit code bit then 1 else 0) 0 [low..high]
 
-getOpcode :: A.Script () -> Opcode
+getOpcode :: A.Script -> Opcode
 getOpcode = decodeOpcode . A.firstCode
 
 decodeOpcode :: InstructionCode -> Opcode
