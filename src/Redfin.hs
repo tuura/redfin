@@ -103,7 +103,7 @@ newtype InstructionAddress = InstructionAddress Word16
 
 -- | Instructions have 16-bit codes.
 newtype InstructionCode = InstructionCode Word16
-    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
+    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real)
 
 -- | 'Opcode' is the leading 6-bit part of the 'InstructionCode', which
 -- determines the instruction. The remaining 10 bits of the 'InstructionCode'
@@ -153,7 +153,19 @@ data State = State
     , memory              :: Memory
     , program             :: Program
     , clock               :: Clock }
-    deriving (Eq, Show)
+    deriving Eq
+
+instance Show State where
+    show State {..} = unlines $
+        [ show r ++ " = " ++ show v | (r, Value v) <- Map.toAscList registers ]
+        ++
+        [ "[" ++ show a ++ "] = " ++ show v
+        | (MemoryAddress a, Value v) <- Map.toAscList memory ]
+        ++
+        [ show f ++ " = " ++ show v | (f, v) <- Map.toAscList flags ]
+        ++
+        [ "Instruction counter = " ++ show (fromIntegral instructionCounter :: Int)
+        , "Clock = " ++ show (fromIntegral instructionCounter :: Int)]
 
 -- | The Redfin state transformer.
 data Redfin a = Redfin { redfin :: (State -> (a, State)) } deriving Functor

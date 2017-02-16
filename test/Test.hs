@@ -34,5 +34,5 @@ main = do
     let program      = assemble script
         initialState = State Map.empty 0 0 Map.empty memory program 0
         finalState   = simulate initialState
-    putStrLn $ "\nInitial state = " ++ show initialState
-    putStrLn $ "\nFinal state = " ++ show finalState
+    putStrLn $ "Initial state:\n" ++ show initialState
+    putStrLn $ "Final state:\n" ++ show finalState
