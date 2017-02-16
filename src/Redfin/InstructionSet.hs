@@ -29,11 +29,11 @@ import qualified Redfin.Semantics as S
 -- TODO: Add documentation.
 
 typeA :: Map Opcode (Redfin ())
-typeA = Map.fromList $ map (\(m, s) -> (getOpcode m, s))
+typeA = Map.fromList $ map (\(m, s) -> (A.topOpcode m, s))
     [(A.halt, S.halt)]
 
 typeB :: Map Opcode (Register -> MemoryAddress -> Redfin ())
-typeB = Map.fromList $ map (\(m, s) -> (getOpcode $ m R0 0, s))
+typeB = Map.fromList $ map (\(m, s) -> (A.topOpcode $ m R0 0, s))
     [ (A.and  , S.and  )
     , (A.or   , S.or   )
     , (A.xor  , S.xor  )
@@ -53,7 +53,7 @@ typeB = Map.fromList $ map (\(m, s) -> (getOpcode $ m R0 0, s))
     , (A.sra  , S.sra  ) ]
 
 typeC :: Map Opcode (Register -> SImm8 -> Redfin ())
-typeC = Map.fromList $ map (\(m, s) -> (getOpcode $ m R0 0, s))
+typeC = Map.fromList $ map (\(m, s) -> (A.topOpcode $ m R0 0, s))
     [ (A.add_si, S.add_si)
     , (A.sub_si, S.sub_si)
     , (A.mul_si, S.mul_si)
@@ -65,24 +65,24 @@ typeD :: Map Opcode (Register -> SImm8 -> Redfin ())
 typeD = Map.empty
 
 typeE :: Map Opcode (Register -> UImm8 -> Redfin ())
-typeE = Map.fromList $ map (\(m, s) -> (getOpcode $ m R0 0, s))
+typeE = Map.fromList $ map (\(m, s) -> (A.topOpcode $ m R0 0, s))
     [ (A.sl_i , S.sl_i )
     , (A.sr_i , S.sr_i )
     , (A.sra_i, S.sra_i)
     , (A.ld_i , S.ld_i ) ]
 
 typeFS :: Map Opcode (SImm10 -> Redfin ())
-typeFS = Map.fromList $ map (\(m, s) -> (getOpcode $ m 0, s))
+typeFS = Map.fromList $ map (\(m, s) -> (A.topOpcode $ m 0, s))
     [ (A.jmpi   , S.jmpi   )
     , (A.jmpi_ct, S.jmpi_ct)
     , (A.jmpi_cf, S.jmpi_cf) ]
 
 typeFU :: Map Opcode (UImm10 -> Redfin ())
-typeFU = Map.fromList $ map (\(m, s) -> (getOpcode $ m 0, s))
+typeFU = Map.fromList $ map (\(m, s) -> (A.topOpcode $ m 0, s))
     [ (A.wait, S.wait) ]
 
 typeG :: Map Opcode (Register -> Redfin ())
-typeG = Map.fromList $ map (\(m, s) -> (getOpcode $ m R0, s))
+typeG = Map.fromList $ map (\(m, s) -> (A.topOpcode $ m R0, s))
     [ (A.not, S.not) ]
 
 -- | TypeH instruction 'pmac' is currently not implemented.
@@ -92,9 +92,6 @@ typeH = Map.empty
 at :: InstructionCode -> (Int, Int) -> Int
 at code (high, low) =
     foldr (\bit res -> res * 2 + if testBit code bit then 1 else 0) 0 [low..high]
-
-getOpcode :: A.Script -> Opcode
-getOpcode = decodeOpcode . A.firstCode
 
 decodeOpcode :: InstructionCode -> Opcode
 decodeOpcode code = fromIntegral $ code `at` (15, 10)

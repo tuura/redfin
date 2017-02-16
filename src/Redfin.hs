@@ -79,7 +79,7 @@ newtype SImm10 = SImm10 Word16 deriving (Eq, Num, Ord, Show)
 -- | Extend a signed integer to 'Value' applying sign extension. 'Value' must be
 -- wide enough to represent the given integer with no loss of information.
 class SignedValue a where
-    signedValue    :: a -> Value
+    signedValue :: a -> Value
 
 instance SignedValue SImm8  where signedValue (SImm8  s) = fromIntegral s
 instance SignedValue SImm10 where signedValue (SImm10 s) = fromIntegral s
