@@ -156,8 +156,8 @@ data State = State
     , flags               :: Flags
     , memory              :: Memory
     , program             :: Program
-    , clock               :: Clock }
-    deriving Eq
+    , clock               :: Clock
+    } deriving Eq
 
 instance Show State where
     show State {..} = unlines $
@@ -202,9 +202,8 @@ delay cycles = transformState $ \(State rs ic ir fs m p  c         )
                                -> State rs ic ir fs m p (c + cycles)
 
 -- | Lookup the 'Value' in a given 'Register'. If the register has never been
--- initialised, this function returns 0, which is how the current hardware
--- implementation works. To handle more general settings, it may also be useful
--- to raise an error flag in this situation (future work).
+-- initialised, this function returns 0, and raises the
+-- 'UninitialisedRegisterRead' error flag.
 readRegister :: Register -> Redfin Value
 readRegister register = do
     state <- readState
@@ -221,10 +220,8 @@ writeRegister register value =
                     -> State (Map.insert register value rs) ic ir fs m p c
 
 -- | Lookup the 'Value' at the given 'MemoryAddress'. If the value has never been
--- initialised, this function returns 0, which is how the current hardware
--- implementation works. To handle more general settings, it may also be useful
--- to raise an error flag in this situation (future work). We assume that it
--- takes 1 clock cycle to access the memory in hardware.
+-- initialised, this function returns 0, and raises the 'UninitialisedMemoryRead'
+-- error flag. We assume that it takes 1 clock cycle to access memory in hardware.
 readMemory :: MemoryAddress -> Redfin Value
 readMemory address = do
     state <- readState

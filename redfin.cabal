@@ -18,7 +18,6 @@ library
     exposed-modules:    Redfin
                         Redfin.Assembly
                         Redfin.Decode
-                        Redfin.InstructionSet
                         Redfin.Semantics
                         Redfin.Simulate
     build-depends:      base       >= 4.8 && < 5,

@@ -62,7 +62,7 @@ instance Applicative Writer where
 
 instance Monad Writer where
     return a         = Writer (\p -> (a, p)) (error "Empty script")
-    Writer w f >>= k = Writer (\p -> let (a, p') = w p in runWriter (k a) p') f
+    Writer w t >>= f = Writer (\p -> let (a, p') = w p in runWriter (f a) p') t
 
 write :: Opcode -> InstructionCode -> Script
 write o c = Writer
