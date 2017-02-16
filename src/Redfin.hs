@@ -126,6 +126,10 @@ data Flag = Condition
            -- ^ Set when the memory address exceeds the size of Redfin memory
            -- and needs to be truncated, e.g. see the
            -- 'Redfin.Semantics.ldmi' instruction.
+          | UninitialisedRegisterRead
+           -- ^ Set when the program reads from an uninitialised register.
+          | UninitialisedMemoryRead
+           -- ^ Set when the program reads from an uninitialised memory location.
           | OutOfProgram
           -- ^ Set when the instruction counter goes outside program memory,
           -- e.g. after the 'Redfin.Semantics.jmpi' instruction.
@@ -204,7 +208,11 @@ delay cycles = transformState $ \(State rs ic ir fs m p  c         )
 readRegister :: Register -> Redfin Value
 readRegister register = do
     state <- readState
-    return $ Map.findWithDefault 0 register (registers state)
+    case Map.lookup register (registers state) of
+        Just value -> return value
+        Nothing    -> do
+            writeFlag UninitialisedRegisterRead True
+            return 0
 
 -- | Write a new 'Value' to a given 'Register'.
 writeRegister :: Register -> Value -> Redfin ()
@@ -221,7 +229,11 @@ readMemory :: MemoryAddress -> Redfin Value
 readMemory address = do
     state <- readState
     delay 1
-    return $ Map.findWithDefault 0 address (memory state)
+    case Map.lookup address (memory state) of
+        Just value -> return value
+        Nothing    -> do
+            writeFlag UninitialisedMemoryRead True
+            return 0
 
 -- | Write a new 'Value' to the given 'MemoryAddress'. We assume that it takes 1
 -- clock cycle to access the memory in hardware.
