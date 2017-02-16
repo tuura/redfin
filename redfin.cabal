@@ -20,10 +20,16 @@ library
                         Redfin.Decode
                         Redfin.Semantics
                         Redfin.Simulate
+                        Redfin.Verification
+                        Redfin.Verification.Assembly
+                        Redfin.Verification.Decode
+                        Redfin.Verification.Semantics
+                        Redfin.Verification.Verify
     build-depends:      base       >= 4.8 && < 5,
-                        containers == 0.5.*,
+                        containers >= 0.5.7,
                         extra      == 1.5.*,
-                        QuickCheck == 2.9.*
+                        QuickCheck == 2.9.*,
+                        sbv        >= 5.14
     default-language:   Haskell2010
     default-extensions: FlexibleContexts
                         GeneralizedNewtypeDeriving
@@ -35,12 +41,23 @@ library
                         DeriveFunctor
     GHC-options:        -O2 -Wall -fwarn-tabs
 
-test-suite test-redfin
+test-suite test-simulation
     hs-source-dirs:     test
     type:               exitcode-stdio-1.0
-    main-is:            Test.hs
+    main-is:            Simulate.hs
     build-depends:      redfin,
                         base       >= 4.8 && < 5,
                         containers == 0.5.*
+    default-language:   Haskell2010
+    GHC-options:        -O2 -Wall -fwarn-tabs
+
+test-suite test-verification
+    hs-source-dirs:     test
+    type:               exitcode-stdio-1.0
+    main-is:            Verify.hs
+    build-depends:      redfin,
+                        base       >= 4.8 && < 5,
+                        containers == 0.5.*,
+                        sbv        >= 5.14
     default-language:   Haskell2010
     GHC-options:        -O2 -Wall -fwarn-tabs
