@@ -11,7 +11,7 @@
 -----------------------------------------------------------------------------
 module Redfin.InstructionSet (
     -- * Types of instructions
-    typeA, typeB, typeC, typeD, typeE, typeF, typeG, typeH,
+    typeA, typeB, typeC, typeD, typeE, typeFS, typeFU, typeG, typeH,
 
     -- * Instruction decoding primitives
     decodeOpcode, decodeRegister, decodeMemoryAddress, at,
@@ -25,6 +25,8 @@ import Data.Map.Strict (Map)
 import Redfin
 import qualified Redfin.Assembly  as A
 import qualified Redfin.Semantics as S
+
+-- TODO: Add documentation.
 
 typeA :: Map Opcode (Redfin ())
 typeA = Map.fromList $ map (\(m, s) -> (getOpcode m, s))
@@ -69,11 +71,15 @@ typeE = Map.fromList $ map (\(m, s) -> (getOpcode $ m R0 0, s))
     , (A.sra_i, S.sra_i)
     , (A.ld_i , S.ld_i ) ]
 
-typeF :: Map Opcode (SImm10 -> Redfin ())
-typeF = Map.fromList $ map (\(m, s) -> (getOpcode $ m 0, s))
+typeFS :: Map Opcode (SImm10 -> Redfin ())
+typeFS = Map.fromList $ map (\(m, s) -> (getOpcode $ m 0, s))
     [ (A.jmpi   , S.jmpi   )
     , (A.jmpi_ct, S.jmpi_ct)
     , (A.jmpi_cf, S.jmpi_cf) ]
+
+typeFU :: Map Opcode (UImm10 -> Redfin ())
+typeFU = Map.fromList $ map (\(m, s) -> (getOpcode $ m 0, s))
+    [ (A.wait, S.wait) ]
 
 typeG :: Map Opcode (Register -> Redfin ())
 typeG = Map.fromList $ map (\(m, s) -> (getOpcode $ m R0, s))

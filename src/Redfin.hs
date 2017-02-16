@@ -142,7 +142,7 @@ type Flags = Map Flag Bool
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
 -- effect of the 'Redfin.Semantics.wait' instruction.
-newtype Clock = Clock Int64 deriving (Eq, Num, Show)
+newtype Clock = Clock Int64 deriving (Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | The 'State' of Redfin is fully characterised by the contents of the register
 -- bank, instruction counter, flags, memory and program. The latter is assumed
@@ -169,7 +169,7 @@ instance Show State where
         [ show f ++ " = " ++ show v | (f, v) <- Map.toAscList flags ]
         ++
         [ "Instruction counter = " ++ show (fromIntegral instructionCounter :: Int)
-        , "Clock = " ++ show (fromIntegral instructionCounter :: Int)]
+        , "Clock = " ++ show (fromIntegral clock :: Int)]
 
 -- | The Redfin state transformer.
 data Redfin a = Redfin { redfin :: (State -> (a, State)) } deriving Functor

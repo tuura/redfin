@@ -118,11 +118,11 @@ address = fromIntegral
 simm8 :: SImm8 -> InstructionCode
 simm8 (SImm8 s) = fromIntegral s .&. 255
 
-uimm8 :: UImm8 -> InstructionCode
-uimm8 (UImm8 u) = fromIntegral u
-
 simm10 :: SImm10 -> InstructionCode
 simm10 (SImm10 s) = fromIntegral s .&. 1023
+
+uimm8 :: UImm8 -> InstructionCode
+uimm8 (UImm8 u) = fromIntegral u
 
 uimm10 :: UImm10 -> InstructionCode
 uimm10 (UImm10 u) = fromIntegral u

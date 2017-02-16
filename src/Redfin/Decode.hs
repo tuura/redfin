@@ -44,11 +44,11 @@ decodeAndExecute code
     | code `at` (15, 13) == 0b100    = run2 typeC register $ decodeSImm8 code
     | code `at` (15, 12) == 0b1010   = run2 typeD register $ decodeSImm8 code
     | code `at` (15, 12) == 0b1011   = run2 typeE register $ decodeUImm8 code
-    | code `at` (15, 10) == 0b110011 = wait $ decodeUImm10 code -- TypeF
-    | code `at` (15, 13) == 0b110    = run1 typeF $ decodeSImm10 code
+    | code `at` (15, 10) == 0b110011 = run1 typeFU $ decodeUImm10 code
+    | code `at` (15, 13) == 0b110    = run1 typeFS $ decodeSImm10 code
     | code `at` (15, 12) == 0b1110   = run1 typeG register
     | code `at` (15, 10) == 0b111111 = run2 typeH uimm5a uimm5b
-    | otherwise     = writeFlag IllegalInstruction True
+    | otherwise                      = writeFlag IllegalInstruction True
   where
     run1 :: Map Opcode (a -> Redfin ()) -> a -> Redfin ()
     run1 is arg = case Map.lookup (decodeOpcode code) is of
