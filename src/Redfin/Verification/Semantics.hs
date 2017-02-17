@@ -90,11 +90,15 @@ mul_si rX simm = writeRegister rX <~ (readRegister rX, (*), pure $ fromSImm8 sim
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
 div :: Register -> MemoryAddress -> Redfin ()
-div rX dmemaddr = writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
+div rX dmemaddr = do
+    delay 100
+    writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
 
 -- | Instruction @div_si rX, simm@ is implemented as @rX = rX / simm@.
 div_si :: Register -> SImm8 -> Redfin ()
-div_si rX simm = writeRegister rX <~ (readRegister rX, sDiv, pure $ fromSImm8 simm)
+div_si rX simm = do
+    delay 100
+    writeRegister rX <~ (readRegister rX, sDiv, pure $ fromSImm8 simm)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
 and :: Register -> MemoryAddress -> Redfin ()

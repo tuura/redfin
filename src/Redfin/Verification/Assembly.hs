@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 module Redfin.Verification.Assembly (
     -- * Assembly scripts and assembler
-    Script, assemble, topOpcode,
+    Script, assemble, topOpcode, asm,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -72,6 +72,9 @@ instance Monad Writer where
 write :: Opcode -> InstructionCode -> Script
 write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
 
+asm :: InstructionCode -> Script
+asm code = write (decodeOpcode code) code
+
 and   rX dmemaddr = write 0b000001 (register rX .|. address dmemaddr)
 or    rX dmemaddr = write 0b000010 (register rX .|. address dmemaddr)
 xor   rX dmemaddr = write 0b000011 (register rX .|. address dmemaddr)
@@ -114,6 +117,9 @@ pad k = replicate k false
 
 opcode :: Opcode -> InstructionCode
 opcode o = fromBitsLE $ pad 10 ++ (take 6 $ blastLE o)
+
+decodeOpcode :: InstructionCode -> Opcode
+decodeOpcode c = fromBitsLE $ (drop 10 $ blastLE c) ++ pad 2
 
 register :: Register -> InstructionCode
 register r = fromBitsLE $ pad 8 ++ (take 2 $ blastLE r) ++ pad 6

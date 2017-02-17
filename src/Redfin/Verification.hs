@@ -17,7 +17,7 @@ module Redfin.Verification (
     Register, RegisterBank,
     MemoryAddress, Memory,
     InstructionAddress, InstructionCode, Opcode, Program,
-    Flag (..), Flags,
+    Flag (..), Flags, flagId,
     Clock,
     State (..),
 
@@ -35,9 +35,7 @@ module Redfin.Verification (
     ) where
 
 import Control.Monad
-import qualified Data.Map.Strict as Map
 import Data.SBV
-import Data.Map.Strict (Map)
 
 -- TODO: Unify with the simulation backend.
 
@@ -113,10 +111,13 @@ data Flag = Condition
           -- e.g. after the 'Redfin.Semantics.jmpi' instruction.
           | Overflow
           -- ^ Set when arithmetic overflow occurs.
-          deriving (Eq, Ord, Show)
+          deriving (Enum, Eq, Ord, Show)
+
+flagId :: Flag -> SWord8
+flagId = literal . fromIntegral . fromEnum
 
 -- | The state of flags is represented by a map from flags to their values.
-type Flags = Map Flag SBool
+type Flags = SFunArray Word8 Bool
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
 -- effect of the 'Redfin.Semantics.wait' instruction.
@@ -145,12 +146,10 @@ instance Mergeable State where
          rs = symbolicMerge f t rs1 rs2
          ic = symbolicMerge f t ic1 ic2
          ir = symbolicMerge f t ir1 ir2
-         fs = go fs1 fs2
+         fs = symbolicMerge f t fs1 fs2
          m  = symbolicMerge f t m1 m2
          p  = symbolicMerge f t p1 p2
          c  = symbolicMerge f t c1 c2
-         go :: (Ord k, Mergeable v) => Map k v -> Map k v -> Map k v
-         go = Map.unionWith (symbolicMerge f t)
 
 -- | The Redfin state transformer.
 data Redfin a = Redfin { redfin :: (State -> (a, State)) } deriving Functor
@@ -221,9 +220,7 @@ writeMemory address value = do
 toMemoryAddress :: Value -> Redfin SWord8
 toMemoryAddress value = do
     let valid = value .< 256
-    transformState $ \(State rs ic ir                              fs  m p c)
-         -> ite valid (State rs ic ir                              fs  m p c)
-                      (State rs ic ir (Map.insert OutOfMemory true fs) m p c)
+    transformState $ \s -> ite valid s (snd $ redfin (writeFlag OutOfMemory true) s)
     return $ fromBitsLE (take 8 $ blastLE value)
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
@@ -231,13 +228,13 @@ toMemoryAddress value = do
 readFlag :: Flag -> Redfin SBool
 readFlag flag = do
     state <- readState
-    return $ Map.findWithDefault false flag (flags state)
+    return $ readArray (flags state) (flagId flag)
 
 -- | Set a given 'Flag' to the specified Boolean value.
 writeFlag :: Flag -> SBool -> Redfin ()
 writeFlag flag value =
-    transformState $ \(State rs ic ir                        fs  m p c)
-                    -> State rs ic ir (Map.insert flag value fs) m p c
+    transformState $ \(State rs ic ir             fs                      m p c)
+                    -> State rs ic ir (writeArray fs (flagId flag) value) m p c
 
 -- | Lookup the 'InstructionCode' at the given 'InstructionAddress'. If the
 -- program has no code associated with the address, the function returns 0 and
