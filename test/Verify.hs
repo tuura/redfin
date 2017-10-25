@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-import Data.SBV
+import Data.SBV hiding (label)
 
 import Redfin.Verification hiding (memory, program)
 import Redfin.Verification.Assembly
@@ -21,6 +21,7 @@ script1 :: UImm10 -> Script
 script1 x = do
     ld_i r0 0    -- Set R0 to 0 (result).
     ld_i r1 1    -- Set R1 to 1 (counter).
+    loop <- label
     st r1 6      -- Set the pointer to R1.
     cmpgt r1 0   -- Are we done?
     jmpi_ct 5    -- If yes, go to halt.
@@ -28,7 +29,7 @@ script1 x = do
     st r2 7      -- Store it in a temporary variable.
     add r0 7     -- Accumulate result.
     add_si r1 1  -- Increment the counter.
-    jmpi (-8)
+    goto loop
     wait x       -- Wait for x clock cycles
     halt
 
