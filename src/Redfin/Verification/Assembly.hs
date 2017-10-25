@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 module Redfin.Verification.Assembly (
     -- * Assembly scripts and assembler
-    Script, assemble, topOpcode, asm,
+    Script, assemble, topOpcode, asm, label, goto,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -38,7 +38,7 @@ module Redfin.Verification.Assembly (
 
 import Control.Monad
 import Data.Bits hiding (bit, xor)
-import Data.SBV
+import Data.SBV hiding (label)
 import Prelude hiding (and, div, not, or)
 
 import Redfin.Verification
@@ -68,6 +68,17 @@ instance Applicative Writer where
 instance Monad Writer where
     return a         = Writer (\p -> (a, p)) (error "Empty script")
     Writer w t >>= f = Writer (\p -> let (a, p') = w p in runWriter (f a) p') t
+
+newtype Label = Label Int
+
+label :: Writer Label
+label = Writer (\p -> (Label (length p), p)) (error "Label script")
+
+goto :: Label -> Script
+goto (Label there) = do
+    Label here <- label
+    let offset = fromIntegral (there - here - 1)
+    jmpi offset -- TODO: Add error handling if offset is too large
 
 write :: Opcode -> InstructionCode -> Script
 write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
