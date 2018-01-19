@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 module Redfin.Verification.Assembly (
     -- * Assembly scripts and assembler
-    Script, assemble, topOpcode, asm, label, goto,
+    Script, assemble, topOpcode, asm, label, goto, whenZero, whenNonZero,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -49,7 +49,7 @@ type P = [InstructionCode]
 
 -- | An assembly writer monad.
 data Writer a = Writer
-    { runWriter :: (P -> (a, P))
+    { runWriter :: P -> (a, P)
     , topOpcode :: Opcode
     } deriving Functor
 
@@ -79,6 +79,21 @@ goto (Label there) = do
     Label here <- label
     let offset = fromIntegral (there - here - 1)
     jmpi offset -- TODO: Add error handling if offset is too large
+
+scriptLength :: Num a => Script -> a
+scriptLength = fromIntegral . length . snd . flip runWriter []
+
+whenZero :: Register -> Script -> Script
+whenZero reg script = do
+    cmpeq reg 0
+    jmpi_cf (scriptLength script)
+    script
+
+whenNonZero :: Register -> Script -> Script
+whenNonZero reg script = do
+    cmpeq reg 0
+    jmpi_ct (scriptLength script)
+    script
 
 write :: Opcode -> InstructionCode -> Script
 write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
