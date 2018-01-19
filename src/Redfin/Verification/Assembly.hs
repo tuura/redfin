@@ -16,7 +16,7 @@ module Redfin.Verification.Assembly (
     Script, assemble, topOpcode, asm, label, goto, scriptLength,
 
     -- * Vectors
-    Vector (..), foreach,
+    Block (..), foreach,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -87,14 +87,15 @@ scriptLength :: Num a => Script -> a
 scriptLength = fromIntegral . length . snd . flip runWriter []
 
 -- TODO: Can we make this more type-safe?
--- Vector is a basic data structure, which is represented by the address of its
+-- Block is a basic data structure, which is represented by the address of its
 -- location in memory. The first byte stores the address of the last element of
--- the vector, and the rest is the payload.
-newtype Vector = Vector MemoryAddress
+-- the block, and the rest is the payload.
+newtype Block = Block MemoryAddress
 
-foreach :: Register -> Vector -> Script -> Script
-foreach reg (Vector start) script = do
+foreach :: Register -> Block -> Script -> Script
+foreach reg (Block start) script = do
     ld_i reg start
+    add_si reg 1
     Label loop <- label
     script
     add_si reg 1
