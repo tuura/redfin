@@ -13,7 +13,10 @@
 -----------------------------------------------------------------------------
 module Redfin.Verification.Assembly (
     -- * Assembly scripts and assembler
-    Script, assemble, topOpcode, asm, label, goto,
+    Script, assemble, topOpcode, asm, label, goto, scriptLength,
+
+    -- * Vectors
+    Block (..), foreach,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -49,7 +52,7 @@ type P = [InstructionCode]
 
 -- | An assembly writer monad.
 data Writer a = Writer
-    { runWriter :: (P -> (a, P))
+    { runWriter :: P -> (a, P)
     , topOpcode :: Opcode
     } deriving Functor
 
@@ -79,6 +82,26 @@ goto (Label there) = do
     Label here <- label
     let offset = fromIntegral (there - here - 1)
     jmpi offset -- TODO: Add error handling if offset is too large
+
+scriptLength :: Num a => Script -> a
+scriptLength = fromIntegral . length . snd . flip runWriter []
+
+-- TODO: Can we make this more type-safe?
+-- Block is a basic data structure, which is represented by the address of its
+-- location in memory. The first byte stores the address of the last element of
+-- the block, and the rest is the payload.
+newtype Block = Block MemoryAddress
+
+foreach :: Register -> Block -> Script -> Script
+foreach reg (Block start) script = do
+    ld_i reg start
+    add_si reg 1
+    Label loop <- label
+    script
+    add_si reg 1
+    Label here <- label
+    cmpgt reg start
+    jmpi_cf (fromIntegral (loop - here))
 
 write :: Opcode -> InstructionCode -> Script
 write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
