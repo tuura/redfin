@@ -13,7 +13,10 @@
 -----------------------------------------------------------------------------
 module Redfin.Verification.Assembly (
     -- * Assembly scripts and assembler
-    Script, assemble, topOpcode, asm, label, goto, whenZero, whenNonZero,
+    Script, assemble, topOpcode, asm, label, goto, scriptLength,
+
+    -- * Vectors
+    Vector (..), foreach,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -83,17 +86,21 @@ goto (Label there) = do
 scriptLength :: Num a => Script -> a
 scriptLength = fromIntegral . length . snd . flip runWriter []
 
-whenZero :: Register -> Script -> Script
-whenZero reg script = do
-    cmpeq reg 0
-    jmpi_cf (scriptLength script)
-    script
+-- TODO: Can we make this more type-safe?
+-- Vector is a basic data structure, which is represented by the address of its
+-- location in memory. The first byte stores the address of the last element of
+-- the vector, and the rest is the payload.
+newtype Vector = Vector MemoryAddress
 
-whenNonZero :: Register -> Script -> Script
-whenNonZero reg script = do
-    cmpeq reg 0
-    jmpi_ct (scriptLength script)
+foreach :: Register -> Vector -> Script -> Script
+foreach reg (Vector start) script = do
+    ld_i reg start
+    Label loop <- label
     script
+    add_si reg 1
+    Label here <- label
+    cmpgt reg start
+    jmpi_cf (fromIntegral (loop - here))
 
 write :: Opcode -> InstructionCode -> Script
 write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
