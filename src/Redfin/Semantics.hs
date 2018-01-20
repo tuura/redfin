@@ -12,7 +12,7 @@
 module Redfin.Semantics (
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
-
+    fadd, fsub, fmul, fdiv,
     -- * Logical bit-wise instructions
     Redfin.Semantics.and, Redfin.Semantics.or,
     Redfin.Semantics.xor, Redfin.Semantics.not,
@@ -99,6 +99,31 @@ div_si :: Register -> SImm8 -> Redfin ()
 div_si rX simm = do
     delay 100
     writeRegister rX <~ (readRegister rX, sDiv, pure $ fromSImm8 simm)
+
+-- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
+fadd :: Register -> MemoryAddress -> Redfin ()
+fadd rX dmemaddr =
+    error "Fixed precicion arithmetic unimplemented"
+    -- writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
+
+-- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
+fsub :: Register -> MemoryAddress -> Redfin ()
+fsub rX dmemaddr =
+    error "Fixed precicion arithmetic unimplemented"
+    -- writeRegister rX <~ (readRegister rX, (-), readMemory dmemaddr)
+
+-- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
+fmul :: Register -> MemoryAddress -> Redfin ()
+fmul rX dmemaddr =
+    error "Fixed precicion arithmetic unimplemented"
+    -- writeRegister rX <~ (readRegister rX, (*), readMemory dmemaddr)
+
+-- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
+fdiv :: Register -> MemoryAddress -> Redfin ()
+fdiv rX dmemaddr = do
+    error "Fixed precicion arithmetic unimplemented"
+    -- delay 100
+    -- writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
 and :: Register -> MemoryAddress -> Redfin ()

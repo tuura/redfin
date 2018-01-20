@@ -20,10 +20,10 @@ module Redfin.Assembly (
     Stack (..), push, pop,
 
     -- * Expressions
-    Expression, evaluate, read,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
+    fadd, fsub, fmul, fdiv,
 
     -- * Logical bit-wise instructions
     Redfin.Assembly.and, Redfin.Assembly.or,
