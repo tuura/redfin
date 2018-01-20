@@ -15,8 +15,11 @@ module Redfin.Verification.Assembly (
     -- * Assembly scripts and assembler
     Script, assemble, topOpcode, asm, label, goto, scriptLength,
 
-    -- * Vectors
-    Block (..), foreach,
+    -- * Stack
+    Stack (..), push, pop,
+
+    -- * Expressions
+    Expression, evaluate, read,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -41,8 +44,10 @@ module Redfin.Verification.Assembly (
 
 import Control.Monad
 import Data.Bits hiding (bit, xor)
-import Data.SBV hiding (label)
-import Prelude hiding (and, div, not, or)
+import Data.SBV hiding (label, literal)
+import Prelude hiding (and, div, not, or, abs, read)
+
+import qualified Prelude (abs)
 
 import Redfin.Verification
 
@@ -86,29 +91,81 @@ goto (Label there) = do
 scriptLength :: Num a => Script -> a
 scriptLength = fromIntegral . length . snd . flip runWriter []
 
--- TODO: Can we make this more type-safe?
--- Block is a basic data structure, which is represented by the address of its
--- location in memory. The first byte stores the address of the last element of
--- the block, and the rest is the payload.
-newtype Block = Block MemoryAddress
-
-foreach :: Register -> Block -> Script -> Script
-foreach reg (Block start) script = do
-    ld_i reg start
-    add_si reg 1
-    Label loop <- label
-    script
-    add_si reg 1
-    Label here <- label
-    cmpgt reg start
-    jmpi_cf (fromIntegral (loop - here))
-
 write :: Opcode -> InstructionCode -> Script
 write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
 
 asm :: InstructionCode -> Script
 asm code = write (decodeOpcode code) code
 
+-- These are all semantically different memory addresses
+newtype Variable  = Variable  MemoryAddress
+newtype Temporary = Temporary MemoryAddress
+newtype Stack     = Stack     MemoryAddress
+
+-- Pushes the value stored in the register to the stack, advances the stack
+-- pointer, and destroys the value stored in the register.
+push :: Register -> Stack -> Script
+push reg (Stack pointer) = do
+    stmi reg pointer
+    ld reg pointer
+    add_si reg 1
+    st reg pointer
+
+-- Decrements the stack pointer, and loads the value from the top of the stack
+-- into the given register.
+pop :: Register -> Stack -> Script
+pop reg (Stack pointer) = do
+    ld reg pointer
+    sub_si reg 1
+    st reg pointer
+    ldmi reg pointer
+
+type BinaryOperator = Register -> MemoryAddress -> Script
+
+-- Applies a binary operation, such as add, to the two top values stored in
+-- stack and returns the result in a register
+applyBinary :: Register -> Stack -> Temporary -> BinaryOperator -> Script
+applyBinary reg stack (Temporary tmp) op = do
+    pop reg stack
+    st reg tmp
+    pop reg stack
+    op reg tmp
+
+data Expression = Lit SImm8
+                | Var Variable
+                | Bin BinaryOperator Expression Expression
+                | Abs Expression
+
+instance Num Expression where
+    fromInteger = Lit . fromIntegral
+    (+)         = Bin add
+    (-)         = Bin sub
+    (*)         = Bin mul
+    abs         = Abs
+    signum x    = x / Prelude.abs x
+
+instance Fractional Expression where
+    fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
+    (/)            = Bin div
+
+read :: Variable -> Expression
+read = Var
+
+evaluate :: Register -> Stack -> Temporary -> Expression -> Script
+evaluate reg stack tmp expr = case expr of
+    Lit value -> ld_si reg value
+    Var (Variable var) -> ld reg var
+    Bin op x y -> do
+        evaluate reg stack tmp x
+        push reg stack
+        evaluate reg stack tmp y
+        push reg stack
+        applyBinary reg stack tmp op
+    Abs x -> do
+        evaluate reg stack tmp x
+        abs reg
+
+-- Instructions
 and   rX dmemaddr = write 0b000001 (register rX .|. address dmemaddr)
 or    rX dmemaddr = write 0b000010 (register rX .|. address dmemaddr)
 xor   rX dmemaddr = write 0b000011 (register rX .|. address dmemaddr)
@@ -144,6 +201,7 @@ jmpi_cf simm = write 0b110010 (simm10 simm)
 wait    uimm = write 0b110011 (uimm10 uimm)
 
 not rX = write 0b111000 (register rX)
+abs rX = write 0b111001 (register rX)
 halt   = write 0b000000 0
 
 pad :: Int -> [SBool]
