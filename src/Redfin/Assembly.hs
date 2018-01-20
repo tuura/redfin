@@ -20,6 +20,8 @@ module Redfin.Assembly (
     Stack (..), push, pop,
 
     -- * Expressions
+    Expression (..), evaluate, read,
+    Variable (..), Temporary (..),
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -61,6 +63,9 @@ data Writer a = Writer
     { runWriter :: P -> (a, P)
     , topOpcode :: Opcode
     } deriving Functor
+
+instance Show a => Show (Writer a) where
+    show s = show $ reverse $ snd $ runWriter s []
 
 type Script = Writer ()
 
