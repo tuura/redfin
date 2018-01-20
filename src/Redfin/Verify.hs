@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin.Verification.Verify
+-- Module      :  Redfin.Verify
 -- Copyright   :  (c) Andrey Mokhov 2017
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
@@ -9,12 +9,12 @@
 -- Simulating REDFIN programs.
 --
 -----------------------------------------------------------------------------
-module Redfin.Verification.Verify (verify) where
+module Redfin.Verify (verify) where
 
 import Data.SBV
 
-import Redfin.Verification
-import Redfin.Verification.Decode
+import Redfin
+import Redfin.Decode
 
 verify :: Int -> State -> State
 verify steps state

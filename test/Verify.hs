@@ -1,9 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 import Data.SBV hiding (label)
 
-import Redfin.Verification hiding (memory, program)
-import Redfin.Verification.Assembly
-import Redfin.Verification.Verify
+import Redfin hiding (memory, program)
+import Redfin.Assembly
+import Redfin.Verify
 
 r0, r1, r2, r3 :: Register
 [r0, r1, r2, r3] = [0..3]

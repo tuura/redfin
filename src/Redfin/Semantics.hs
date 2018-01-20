@@ -33,17 +33,11 @@ module Redfin.Semantics (
 
 import Control.Monad.Extra
 import qualified Data.Bits as Std
-import Data.Bits hiding (xor, shiftL, shiftR)
+import Data.Bits hiding (xor)
 import Prelude hiding (div, not)
-import qualified Prelude as Std
-import Data.Word
+import Data.SBV
 
 import Redfin
-
--- TODO: Add DivisionByZero flag.
--- TODO: Set Overflow flag.
--- TODO: Implement bus and EEPROM I/O instructions.
--- TODO: Implement fixed-point instructions.
 
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
@@ -55,13 +49,28 @@ import Redfin
     y <- arg2
     res $ x `op` y
 
+pad :: Int -> [SBool]
+pad k = replicate k false
+
+fromSImm8 :: SImm8 -> Value
+fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
+
+fromSImm10 :: SImm10 -> InstructionAddress
+fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
+
+fromUImm8 :: UImm8 -> Value
+fromUImm8 u = fromBitsLE $ blastLE u ++ pad 56
+
+fromUImm10 :: UImm10 -> Value
+fromUImm10 u = fromBitsLE $ (take 10 $ blastLE u) ++ pad 54
+
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 add :: Register -> MemoryAddress -> Redfin ()
 add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
 
 -- | Instruction @add_si rX, simm@ is implemented as @rX = rX + simm@.
 add_si :: Register -> SImm8 -> Redfin ()
-add_si rX simm = writeRegister rX <~ (readRegister rX, (+), pure $ signedValue simm)
+add_si rX simm = writeRegister rX <~ (readRegister rX, (+), pure $ fromSImm8 simm)
 
 -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
 sub :: Register -> MemoryAddress -> Redfin ()
@@ -69,7 +78,7 @@ sub rX dmemaddr = writeRegister rX <~ (readRegister rX, (-), readMemory dmemaddr
 
 -- | Instruction @sub_si rX, simm@ is implemented as @rX = rX - simm@.
 sub_si :: Register -> SImm8 -> Redfin ()
-sub_si rX simm = writeRegister rX <~ (readRegister rX, (-), pure $ signedValue simm)
+sub_si rX simm = writeRegister rX <~ (readRegister rX, (-), pure $ fromSImm8 simm)
 
 -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
 mul :: Register -> MemoryAddress -> Redfin ()
@@ -77,15 +86,19 @@ mul rX dmemaddr = writeRegister rX <~ (readRegister rX, (*), readMemory dmemaddr
 
 -- | Instruction @mul_si rX, simm@ is implemented as @rX = rX * simm@.
 mul_si :: Register -> SImm8 -> Redfin ()
-mul_si rX simm = writeRegister rX <~ (readRegister rX, (*), pure $ signedValue simm)
+mul_si rX simm = writeRegister rX <~ (readRegister rX, (*), pure $ fromSImm8 simm)
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
 div :: Register -> MemoryAddress -> Redfin ()
-div rX dmemaddr = writeRegister rX <~ (readRegister rX, Std.div, readMemory dmemaddr)
+div rX dmemaddr = do
+    delay 100
+    writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
 
 -- | Instruction @div_si rX, simm@ is implemented as @rX = rX / simm@.
 div_si :: Register -> SImm8 -> Redfin ()
-div_si rX simm = writeRegister rX <~ (readRegister rX, Std.div, pure $ signedValue simm)
+div_si rX simm = do
+    delay 100
+    writeRegister rX <~ (readRegister rX, sDiv, pure $ fromSImm8 simm)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
 and :: Register -> MemoryAddress -> Redfin ()
@@ -103,61 +116,49 @@ xor rX dmemaddr = writeRegister rX <~ (readRegister rX, Std.xor, readMemory dmem
 not :: Register -> Redfin ()
 not rX = writeRegister rX =<< (complement <$> readRegister rX)
 
--- | Logical left shift of a 'Value' by the number of bits given in another 'Value'.
-shiftLL :: Value -> Value -> Value
-shiftLL a b = a `Std.shiftL` (fromIntegral b)
-
--- | Logical right shift of a 'Value' by the number of bits given in another 'Value'.
-shiftRL :: Value -> Value -> Value
-shiftRL a b = fromIntegral $ ((fromIntegral a) :: Word64) `Std.shiftR` (fromIntegral b)
-
--- | Arithmetic right shift of a 'Value' by the number of bits given in another 'Value'.
-shiftRA :: Value -> Value -> Value
-shiftRA a b = a `Std.shiftR` (fromIntegral b)
-
 -- | Instruction @sl rX, dmemaddr@ is implemented as @rX = rX << [dmemaddr]@.
 sl :: Register -> MemoryAddress -> Redfin ()
-sl rX dmemaddr = writeRegister rX <~ (readRegister rX, shiftLL, readMemory dmemaddr)
+sl rX dmemaddr = writeRegister rX <~ (readRegister rX, sShiftLeft, readMemory dmemaddr)
 
 -- | Instruction @sl_i rX, uimm@ is implemented as @rX = rX << uimm@.
 sl_i :: Register -> UImm8 -> Redfin ()
-sl_i rX uimm = writeRegister rX <~ (readRegister rX, shiftLL, pure $ unsignedValue uimm)
+sl_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftLeft, pure $ fromUImm8 uimm)
 
 -- | Instruction @sr rX, dmemaddr@ is implemented as @rX = rX >> [dmemaddr]@.
 sr :: Register -> MemoryAddress -> Redfin ()
-sr rX dmemaddr = writeRegister rX <~ (readRegister rX, shiftRL, readMemory dmemaddr)
+sr rX dmemaddr = writeRegister rX <~ (readRegister rX, sShiftRight, readMemory dmemaddr)
 
 -- | Instruction @sr_i rX, uimm@ is implemented as @rX = rX >> uimm@.
 sr_i :: Register -> UImm8 -> Redfin ()
-sr_i rX uimm = writeRegister rX <~ (readRegister rX, shiftRL, pure $ unsignedValue uimm)
+sr_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftRight, pure $ fromUImm8 uimm)
 
 -- | Instruction @sra rX, dmemaddr@ is implemented as @rX = (int)rX >> [dmemaddr]@.
 sra :: Register -> MemoryAddress -> Redfin ()
-sra rX dmemaddr = writeRegister rX <~ (readRegister rX, shiftRA, readMemory dmemaddr)
+sra rX dmemaddr = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, readMemory dmemaddr)
 
 -- | Instruction @sra_i rX, uimm@ is implemented as @rX = (int)rX >> uimm@.
 sra_i :: Register -> UImm8 -> Redfin ()
-sra_i rX uimm = writeRegister rX <~ (readRegister rX, shiftRA, pure $ unsignedValue uimm)
+sra_i rX uimm = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, pure $ fromUImm8 uimm)
 
 -- | Instruction @cmpeq rX, dmemaddr@ is implemented as @cond = (rX == [dmemaddr])@.
 cmpeq :: Register -> MemoryAddress -> Redfin ()
-cmpeq rX dmemaddr = writeFlag Condition <~ (readRegister rX, (==), readMemory dmemaddr)
+cmpeq rX dmemaddr = writeFlag Condition <~ (readRegister rX, (.==), readMemory dmemaddr)
 
 -- | Instruction @cmplt rX, dmemaddr@ is implemented as @cond = (rX < [dmemaddr])@.
 cmplt :: Register -> MemoryAddress -> Redfin ()
-cmplt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (<), readMemory dmemaddr)
+cmplt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (.<), readMemory dmemaddr)
 
 -- | Instruction @cmpgt rX, dmemaddr@ is implemented as @cond = (rX > [dmemaddr])@.
 cmpgt :: Register -> MemoryAddress -> Redfin ()
-cmpgt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (>), readMemory dmemaddr)
+cmpgt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (.>), readMemory dmemaddr)
 
 -- | Instruction @ld_si rX, simm@ is implemented as @rx = (int)simm@.
 ld_si :: Register -> SImm8 -> Redfin ()
-ld_si rX simm = writeRegister rX $ signedValue simm
+ld_si rX simm = writeRegister rX $ fromSImm8 simm
 
 -- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
 ld_i :: Register -> UImm8 -> Redfin ()
-ld_i rX uimm = writeRegister rX $ unsignedValue uimm
+ld_i rX uimm = writeRegister rX (fromUImm8 uimm)
 
 -- | Instruction @ld rX, dmemaddr@ is implemented as @rx = [dmemaddr]@.
 ld :: Register -> MemoryAddress -> Redfin ()
@@ -181,25 +182,34 @@ stmi rX dmemaddr = do
 -- | Instruction @jmpi simm@ is implemented as
 -- @InstructionCounter = InstructionCounter + simm + 1@.
 jmpi :: SImm10 -> Redfin ()
-jmpi (SImm10 simm) =
-    transformState $ \(State rs   ic                                ir fs m p c)
-                    -> State rs ((ic + fromIntegral simm) .&. 1023) ir fs m p c
+jmpi simm =
+    transformState $ \(State rs  ic                    ir fs m p c)
+                    -> State rs (ic + fromSImm10 simm) ir fs m p c
+
 
 -- | Instruction @jmpi_ct simm@ is implemented as
 -- @if Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_ct :: SImm10 -> Redfin ()
-jmpi_ct = whenM (readFlag Condition) . jmpi
+jmpi_ct simm = do
+    condition <- readFlag Condition
+    state <- readState
+    let jumpState = snd $ redfin (jmpi simm) state
+    writeState $ ite condition jumpState state
 
 -- | Instruction @jmpi_cf simm@ is implemented as
 -- @if ¬Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_cf :: SImm10 -> Redfin ()
-jmpi_cf = unlessM (readFlag Condition) . jmpi
+jmpi_cf simm = do
+    condition <- readFlag Condition
+    state <- readState
+    let jumpState = snd $ redfin (jmpi simm) state
+    writeState $ ite condition state jumpState
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()
-wait (UImm10 uimm) = delay (fromIntegral uimm)
+wait uimm = delay (fromUImm10 uimm)
 
 -- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
 -- more meaningful implementation, for example, by raising the @Halt@ flag.
 halt :: Redfin ()
-halt = writeFlag Halt True
+halt = writeFlag Halt true

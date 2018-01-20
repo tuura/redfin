@@ -1,28 +1,28 @@
 {-# LANGUAGE DeriveFunctor #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin
+-- Module      :  Redfin.Verification
 -- Copyright   :  (c) Andrey Mokhov 2017
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
 -- Stability   :  experimental
 --
--- REDFIN sequencer.
+-- REDFIN sequencer (verification backend).
 --
 -----------------------------------------------------------------------------
 module Redfin (
     -- * Data types
-    Value (..),
-    UImm5 (..), UImm8 (..), UImm10 (..), SImm8 (..), SImm10 (..),
-    Register (..), RegisterBank,
-    MemoryAddress (..), Memory,
-    InstructionAddress (..), InstructionCode (..), Opcode (..), Program,
-    Flag (..), Flags,
-    Clock (..),
+    Value,
+    UImm5, UImm8, UImm10, SImm8, SImm10,
+    Register, RegisterBank,
+    MemoryAddress, Memory,
+    InstructionAddress, InstructionCode, Opcode, Program,
+    Flag (..), Flags, flagId,
+    Clock,
     State (..),
 
     -- * Conversion between data types
-    UnsignedValue (..), SignedValue (..), toMemoryAddress,
+    toMemoryAddress,
 
     -- * Redfin state transformer
     Redfin (..), transformState, readState, writeState,
@@ -35,84 +35,60 @@ module Redfin (
     ) where
 
 import Control.Monad
-import Data.Bits
-import Data.Int
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict (Map)
-import Data.Word
+import Data.SBV
+
+-- TODO: Unify with the simulation backend.
 
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
-newtype Value = Value Int64
-    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
+type Value = SWord64
 
 -- | The 'UImm5' datatype represents 5-bit unsigned immediate arguments that are
 -- used by the 'Redfin.Semantics.pmac' instruction.
-newtype UImm5 = UImm5 Word8 deriving (Eq, Num, Ord, Show)
+type UImm5 = SWord8
 
 -- | The 'UImm8' datatype represents 8-bit unsigned immediate arguments that are
 -- used by many Redfin instructions with immediate addressing mode.
-newtype UImm8 = UImm8 Word8 deriving (Eq, Num, Ord, Show)
+type UImm8 = SWord8
 
 -- | The 'UImm10' datatype represents 10-bit unsigned immediate arguments that
 -- are used by the 'Redfin.Semantics.wait' instruction.
-newtype UImm10 = UImm10 Word16 deriving (Eq, Num, Ord, Show)
-
--- | Extend an unsigned integer to 'Value'. The latter must be wide enough to
--- represent the given integer with no loss of information.
-class UnsignedValue a where
-    unsignedValue :: a -> Value
-
-instance UnsignedValue UImm5  where unsignedValue (UImm5  u) = fromIntegral u
-instance UnsignedValue UImm8  where unsignedValue (UImm8  u) = fromIntegral u
-instance UnsignedValue UImm10 where unsignedValue (UImm10 u) = fromIntegral u
+type UImm10 = SWord16
 
 -- | The 'SImm8' datatype represents 8-bit signed immediate arguments that are
 -- used by many Redfin instructions with immediate addressing mode.
-newtype SImm8 = SImm8 Word8 deriving (Eq, Num, Ord, Show)
+type SImm8 = SInt8
 
 -- | The 'SImm10' datatype represents 10-bit signed immediate arguments that are
 -- used for specifying the relative jump address, e.g. in
 -- 'Redfin.Semantics.jmpi' instruction.
-newtype SImm10 = SImm10 Word16 deriving (Eq, Num, Ord, Show)
+type SImm10 = SInt16
 
--- | Extend a signed integer to 'Value' applying sign extension. 'Value' must be
--- wide enough to represent the given integer with no loss of information.
-class SignedValue a where
-    signedValue :: a -> Value
-
-instance SignedValue SImm8  where signedValue (SImm8  s) = fromIntegral s
-instance SignedValue SImm10 where signedValue (SImm10 s) = fromIntegral s
-
--- | Redfin has 4 general-purpose registers 'R0' - 'R3'.
-data Register = R0 | R1 | R2 | R3 deriving (Enum, Eq, Ord, Show)
+-- | Redfin has 4 general-purpose registers.
+type Register = SWord8
 
 -- | The register bank is represented by a map from registers to their values.
-type RegisterBank = Map Register Value
+type RegisterBank = SFunArray Word8 Word64
 
 -- | Redfin memory can hold 256 values.
-newtype MemoryAddress = MemoryAddress Word8
-    deriving (Enum, Eq, Integral, Num, Ord, Real, Show)
+type MemoryAddress = SWord8
 
 -- | The memory is represented by a map from memory addresses to their values.
-type Memory = Map MemoryAddress Value
+type Memory = SFunArray Word8 Word64
 
 -- | Programs are stored in program memory (currently, up to 1024 instructions).
-newtype InstructionAddress = InstructionAddress Word16
-    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
+type InstructionAddress = SWord16
 
 -- | Instructions have 16-bit codes.
-newtype InstructionCode = InstructionCode Word16
-    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real)
+type InstructionCode = SWord16
 
 -- | 'Opcode' is the leading 6-bit part of the 'InstructionCode', which
 -- determines the instruction. The remaining 10 bits of the 'InstructionCode'
 -- are used to specify immediate instruction arguments.
-newtype Opcode = Opcode Word8
-    deriving (Bits, Enum, Eq, Integral, Num, Ord, Real, Show)
+type Opcode = SWord8
 
 -- | The program is represented by a map from instruction addresses to codes.
-type Program = Map InstructionAddress InstructionCode
+type Program = SFunArray Word16 Word16
 
 -- | Boolean 'Flag's indicate the current status of Redfin.
 data Flag = Condition
@@ -135,14 +111,17 @@ data Flag = Condition
           -- e.g. after the 'Redfin.Semantics.jmpi' instruction.
           | Overflow
           -- ^ Set when arithmetic overflow occurs.
-          deriving (Eq, Ord, Show)
+          deriving (Enum, Eq, Ord, Show)
+
+flagId :: Flag -> SWord8
+flagId = literal . fromIntegral . fromEnum
 
 -- | The state of flags is represented by a map from flags to their values.
-type Flags = Map Flag Bool
+type Flags = SFunArray Word8 Bool
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
 -- effect of the 'Redfin.Semantics.wait' instruction.
-newtype Clock = Clock Int64 deriving (Enum, Eq, Integral, Num, Ord, Real, Show)
+type Clock = SWord64
 
 -- | The 'State' of Redfin is fully characterised by the contents of the register
 -- bank, instruction counter, flags, memory and program. The latter is assumed
@@ -157,19 +136,20 @@ data State = State
     , memory              :: Memory
     , program             :: Program
     , clock               :: Clock
-    } deriving Eq
+    } deriving Show
 
-instance Show State where
-    show State {..} = unlines $
-        [ show r ++ " = " ++ show v | (r, Value v) <- Map.toAscList registers ]
-        ++
-        [ "[" ++ show a ++ "] = " ++ show v
-        | (MemoryAddress a, Value v) <- Map.toAscList memory ]
-        ++
-        [ show f ++ " = " ++ show v | (f, v) <- Map.toAscList flags ]
-        ++
-        [ "Instruction counter = " ++ show (fromIntegral instructionCounter :: Int)
-        , "Clock = " ++ show (fromIntegral clock :: Int)]
+instance Mergeable State where
+    symbolicMerge f t (State rs1 ic1 ir1 fs1 m1 p1 c1)
+                      (State rs2 ic2 ir2 fs2 m2 p2 c2) =
+                       State rs  ic  ir  fs  m  p  c
+      where
+         rs = symbolicMerge f t rs1 rs2
+         ic = symbolicMerge f t ic1 ic2
+         ir = symbolicMerge f t ir1 ir2
+         fs = symbolicMerge f t fs1 fs2
+         m  = symbolicMerge f t m1 m2
+         p  = symbolicMerge f t p1 p2
+         c  = symbolicMerge f t c1 c2
 
 -- | The Redfin state transformer.
 data Redfin a = Redfin { redfin :: (State -> (a, State)) } deriving Functor
@@ -202,65 +182,59 @@ delay cycles = transformState $ \(State rs ic ir fs m p  c         )
                                -> State rs ic ir fs m p (c + cycles)
 
 -- | Lookup the 'Value' in a given 'Register'. If the register has never been
--- initialised, this function returns 0, and raises the
--- 'UninitialisedRegisterRead' error flag.
+-- initialised, this function returns 0, which is how the current hardware
+-- implementation works. To handle more general settings, it may also be useful
+-- to raise an error flag in this situation (future work).
 readRegister :: Register -> Redfin Value
 readRegister register = do
     state <- readState
-    case Map.lookup register (registers state) of
-        Just value -> return value
-        Nothing    -> do
-            writeFlag UninitialisedRegisterRead True
-            return 0
+    return $ readArray (registers state) register
 
 -- | Write a new 'Value' to a given 'Register'.
 writeRegister :: Register -> Value -> Redfin ()
 writeRegister register value =
-    transformState $ \(State                            rs  ic ir fs m p c)
-                    -> State (Map.insert register value rs) ic ir fs m p c
+    transformState $ \(State             rs                 ic ir fs m p c)
+                    -> State (writeArray rs register value) ic ir fs m p c
 
 -- | Lookup the 'Value' at the given 'MemoryAddress'. If the value has never been
--- initialised, this function returns 0, and raises the 'UninitialisedMemoryRead'
--- error flag. We assume that it takes 1 clock cycle to access memory in hardware.
+-- initialised, this function returns 0, which is how the current hardware
+-- implementation works. To handle more general settings, it may also be useful
+-- to raise an error flag in this situation (future work). We assume that it
+-- takes 1 clock cycle to access the memory in hardware.
 readMemory :: MemoryAddress -> Redfin Value
 readMemory address = do
     state <- readState
     delay 1
-    case Map.lookup address (memory state) of
-        Just value -> return value
-        Nothing    -> do
-            writeFlag UninitialisedMemoryRead True
-            return 0
+    return $ readArray (memory state) address
 
 -- | Write a new 'Value' to the given 'MemoryAddress'. We assume that it takes 1
 -- clock cycle to access the memory in hardware.
 writeMemory :: MemoryAddress -> Value -> Redfin ()
 writeMemory address value = do
     delay 1
-    transformState $ \(State rs ic ir fs                           m  p c)
-                    -> State rs ic ir fs (Map.insert address value m) p c
+    transformState $ \(State rs ic ir fs             m                p c)
+                    -> State rs ic ir fs (writeArray m address value) p c
 
--- | Convert a 'Value' to the 'MemoryAddress'. If the value needs to be
+-- | Convert a 'Value' to the symbolic memory address. If the value needs to be
 -- truncated, the 'OutOfMemory' flag is set.
-toMemoryAddress :: Value -> Redfin MemoryAddress
-toMemoryAddress value
-    | value < 256 = return $ fromIntegral value
-    | otherwise   = do
-        writeFlag OutOfMemory True
-        return $ fromIntegral (value .&. 255)
+toMemoryAddress :: Value -> Redfin SWord8
+toMemoryAddress value = do
+    let valid = value .< 256
+    transformState $ \s -> ite valid s (snd $ redfin (writeFlag OutOfMemory true) s)
+    return $ fromBitsLE (take 8 $ blastLE value)
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
 -- any value, it is assumed to be 'False'.
-readFlag :: Flag -> Redfin Bool
+readFlag :: Flag -> Redfin SBool
 readFlag flag = do
     state <- readState
-    return $ Map.findWithDefault False flag (flags state)
+    return $ readArray (flags state) (flagId flag)
 
 -- | Set a given 'Flag' to the specified Boolean value.
-writeFlag :: Flag -> Bool -> Redfin ()
+writeFlag :: Flag -> SBool -> Redfin ()
 writeFlag flag value =
-    transformState $ \(State rs ic ir                        fs  m p c)
-                    -> State rs ic ir (Map.insert flag value fs) m p c
+    transformState $ \(State rs ic ir             fs                      m p c)
+                    -> State rs ic ir (writeArray fs (flagId flag) value) m p c
 
 -- | Lookup the 'InstructionCode' at the given 'InstructionAddress'. If the
 -- program has no code associated with the address, the function returns 0 and
@@ -270,11 +244,7 @@ readProgram :: InstructionAddress -> Redfin InstructionCode
 readProgram address = do
     state <- readState
     delay 1
-    case Map.lookup address (program state) of
-        Just code -> return code
-        Nothing -> do
-            writeFlag OutOfProgram True
-            return 0
+    return $ readArray (program state) address
 
 -- | Fetch the instruction code pointed to by the instruction counter and store
 -- it in the instruction register. We assume that instruction fetch takes one
@@ -298,4 +268,3 @@ writeInstructionRegister :: InstructionCode -> Redfin ()
 writeInstructionRegister instructionCode =
     transformState $ \(State rs ic _               fs m p c)
                     -> State rs ic instructionCode fs m p c
-
