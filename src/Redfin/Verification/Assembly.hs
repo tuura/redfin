@@ -1,5 +1,6 @@
-{-# LANGUAGE BinaryLiterals, DeriveFunctor #-}
+{-# LANGUAGE BinaryLiterals, DataKinds, DeriveFunctor, FlexibleInstances, GADTs #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Verification.Assembly
@@ -47,7 +48,7 @@ import Data.Bits hiding (bit, xor)
 import Data.SBV hiding (label, literal)
 import Prelude hiding (and, div, not, or, abs, read)
 
-import qualified Prelude (abs)
+import qualified Prelude (abs, div)
 
 import Redfin.Verification
 
@@ -97,10 +98,15 @@ write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
 asm :: InstructionCode -> Script
 asm code = write (decodeOpcode code) code
 
+-- We distinguish between integer and fixed-point values
+data ValueType = IntType | FPType
+
 -- These are all semantically different memory addresses
-newtype Variable  = Variable  MemoryAddress
-newtype Temporary = Temporary MemoryAddress
-newtype Stack     = Stack     MemoryAddress
+newtype Temporary                 = Temporary MemoryAddress
+newtype Stack                     = Stack     MemoryAddress
+data Variable (a :: ValueType) where
+    IntegerVariable    :: MemoryAddress -> Variable IntType
+    FixedPointVariable :: MemoryAddress -> Variable FPType
 
 -- Pushes the value stored in the register to the stack, advances the stack
 -- pointer, and destroys the value stored in the register.
@@ -131,30 +137,57 @@ applyBinary reg stack (Temporary tmp) op = do
     pop reg stack
     op reg tmp
 
-data Expression = Lit SImm8
-                | Var Variable
-                | Bin BinaryOperator Expression Expression
-                | Abs Expression
+data Expression (a :: ValueType) = Lit SImm8
+                                 | Var (Variable a)
+                                 | Bin BinaryOperator (Expression a) (Expression a)
+                                 | Abs (Expression a)
 
-instance Num Expression where
+instance Num (Expression IntType) where
     fromInteger = Lit . fromIntegral
     (+)         = Bin add
     (-)         = Bin sub
     (*)         = Bin mul
     abs         = Abs
+    signum x    = x `Prelude.div` Prelude.abs x
+
+instance Eq (Expression IntType) where
+    (==) = error "Eq cannot be implemented for Expression IntType"
+
+instance Ord (Expression IntType) where
+    compare = error "Ord cannot be implemented for Expression IntType"
+
+instance Real (Expression IntType) where
+    toRational = error "Real cannot be implemented for Expression IntType"
+
+instance Enum (Expression IntType) where
+    toEnum   = error "Enum cannot be implemented for Expression IntType"
+    fromEnum = error "Enum cannot be implemented for Expression IntType"
+
+instance Integral (Expression IntType) where
+    div       = Bin div
+    quotRem   = error "quotRem is not implemented for Expression IntType"
+    toInteger = error "quotRem cannot be implemented for Expression IntType"
+
+instance Num (Expression FPType) where
+    fromInteger = Lit . fromIntegral
+    (+)         = Bin fadd
+    (-)         = Bin fsub
+    (*)         = Bin fmul
+    abs         = Abs
     signum x    = x / Prelude.abs x
 
-instance Fractional Expression where
+instance Fractional (Expression FPType) where
     fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
-    (/)            = Bin div
+    (/)            = Bin fdiv
 
-read :: Variable -> Expression
+read :: Variable a -> Expression a
 read = Var
 
-evaluate :: Register -> Stack -> Temporary -> Expression -> Script
+evaluate :: Register -> Stack -> Temporary -> Expression a -> Script
 evaluate reg stack tmp expr = case expr of
     Lit value -> ld_si reg value
-    Var (Variable var) -> ld reg var
+    Var (IntegerVariable    var) -> ld reg var
+    Var (FixedPointVariable var) -> ld reg var
     Bin op x y -> do
         evaluate reg stack tmp x
         push reg stack
@@ -183,6 +216,11 @@ cmpgt rX dmemaddr = write 0b010011 (register rX .|. address dmemaddr)
 sl    rX dmemaddr = write 0b011100 (register rX .|. address dmemaddr)
 sr    rX dmemaddr = write 0b011101 (register rX .|. address dmemaddr)
 sra   rX dmemaddr = write 0b011110 (register rX .|. address dmemaddr)
+
+fadd   rX dmemaddr = write 0b001100 (register rX .|. address dmemaddr)
+fsub   rX dmemaddr = write 0b001101 (register rX .|. address dmemaddr)
+fmul   rX dmemaddr = write 0b001110 (register rX .|. address dmemaddr)
+fdiv   rX dmemaddr = write 0b001111 (register rX .|. address dmemaddr)
 
 add_si rX simm = write 0b100000 (register rX .|. simm8 simm)
 sub_si rX simm = write 0b100001 (register rX .|. simm8 simm)
