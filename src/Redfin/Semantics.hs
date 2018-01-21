@@ -102,25 +102,25 @@ div_si rX simm = do
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 fadd :: Register -> MemoryAddress -> Redfin ()
-fadd rX dmemaddr =
+fadd _rX _dmemaddr =
     error "Fixed precicion arithmetic unimplemented"
     -- writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
 
 -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
 fsub :: Register -> MemoryAddress -> Redfin ()
-fsub rX dmemaddr =
+fsub _rX _dmemaddr =
     error "Fixed precicion arithmetic unimplemented"
     -- writeRegister rX <~ (readRegister rX, (-), readMemory dmemaddr)
 
 -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
 fmul :: Register -> MemoryAddress -> Redfin ()
-fmul rX dmemaddr =
+fmul _rX _dmemaddr =
     error "Fixed precicion arithmetic unimplemented"
     -- writeRegister rX <~ (readRegister rX, (*), readMemory dmemaddr)
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
 fdiv :: Register -> MemoryAddress -> Redfin ()
-fdiv rX dmemaddr = do
+fdiv _rX _dmemaddr = do
     error "Fixed precicion arithmetic unimplemented"
     -- delay 100
     -- writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)

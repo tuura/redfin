@@ -1,6 +1,5 @@
-{-# LANGUAGE BinaryLiterals, DataKinds, DeriveFunctor, FlexibleInstances, GADTs #-}
+{-# LANGUAGE BinaryLiterals, DeriveFunctor #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Assembly
@@ -16,16 +15,9 @@ module Redfin.Assembly (
     -- * Assembly scripts and assembler
     Script, assemble, topOpcode, asm, label, goto, scriptLength,
 
-    -- * Stack
-    Stack (..), push, pop,
-
-    -- * Expressions
-    Expression (..), evaluate, read,
-    Variable (..), Temporary (..),
-
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
-    fadd, fsub, fmul, fdiv,
+    fadd, fsub, fmul, fdiv, Redfin.Assembly.abs,
 
     -- * Logical bit-wise instructions
     Redfin.Assembly.and, Redfin.Assembly.or,
@@ -47,10 +39,8 @@ module Redfin.Assembly (
 
 import Control.Monad
 import Data.Bits hiding (bit, xor)
-import Data.SBV hiding (label, literal)
-import Prelude hiding (and, div, not, or, abs, read)
-
-import qualified Prelude (abs, div)
+import Data.SBV hiding (label)
+import Prelude hiding (and, div, not, or, abs)
 
 import Redfin
 
@@ -102,106 +92,6 @@ write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
 
 asm :: InstructionCode -> Script
 asm code = write (decodeOpcode code) code
-
--- We distinguish between integer and fixed-point values
-data ValueType = IntType | FPType
-
--- These are all semantically different memory addresses
-newtype Temporary                 = Temporary MemoryAddress
-newtype Stack                     = Stack     MemoryAddress
-data Variable (a :: ValueType) where
-    IntegerVariable    :: MemoryAddress -> Variable IntType
-    FixedPointVariable :: MemoryAddress -> Variable FPType
-
--- Pushes the value stored in the register to the stack, advances the stack
--- pointer, and destroys the value stored in the register.
-push :: Register -> Stack -> Script
-push reg (Stack pointer) = do
-    stmi reg pointer
-    ld reg pointer
-    add_si reg 1
-    st reg pointer
-
--- Decrements the stack pointer, and loads the value from the top of the stack
--- into the given register.
-pop :: Register -> Stack -> Script
-pop reg (Stack pointer) = do
-    ld reg pointer
-    sub_si reg 1
-    st reg pointer
-    ldmi reg pointer
-
-type BinaryOperator = Register -> MemoryAddress -> Script
-
--- Applies a binary operation, such as add, to the two top values stored in
--- stack and returns the result in a register
-applyBinary :: Register -> Stack -> Temporary -> BinaryOperator -> Script
-applyBinary reg stack (Temporary tmp) op = do
-    pop reg stack
-    st reg tmp
-    pop reg stack
-    op reg tmp
-
-data Expression (a :: ValueType) = Lit SImm8
-                                 | Var (Variable a)
-                                 | Bin BinaryOperator (Expression a) (Expression a)
-                                 | Abs (Expression a)
-
-instance Num (Expression IntType) where
-    fromInteger = Lit . fromIntegral
-    (+)         = Bin add
-    (-)         = Bin sub
-    (*)         = Bin mul
-    abs         = Abs
-    signum x    = x `Prelude.div` Prelude.abs x
-
-instance Eq (Expression IntType) where
-    (==) = error "Eq cannot be implemented for Expression IntType"
-
-instance Ord (Expression IntType) where
-    compare = error "Ord cannot be implemented for Expression IntType"
-
-instance Real (Expression IntType) where
-    toRational = error "Real cannot be implemented for Expression IntType"
-
-instance Enum (Expression IntType) where
-    toEnum   = error "Enum cannot be implemented for Expression IntType"
-    fromEnum = error "Enum cannot be implemented for Expression IntType"
-
-instance Integral (Expression IntType) where
-    div       = Bin div
-    quotRem   = error "quotRem is not implemented for Expression IntType"
-    toInteger = error "quotRem cannot be implemented for Expression IntType"
-
-instance Num (Expression FPType) where
-    fromInteger = Lit . fromIntegral
-    (+)         = Bin fadd
-    (-)         = Bin fsub
-    (*)         = Bin fmul
-    abs         = Abs
-    signum x    = x / Prelude.abs x
-
-instance Fractional (Expression FPType) where
-    fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
-    (/)            = Bin fdiv
-
-read :: Variable a -> Expression a
-read = Var
-
-evaluate :: Register -> Stack -> Temporary -> Expression a -> Script
-evaluate reg stack tmp expr = case expr of
-    Lit value -> ld_si reg value
-    Var (IntegerVariable    var) -> ld reg var
-    Var (FixedPointVariable var) -> ld reg var
-    Bin op x y -> do
-        evaluate reg stack tmp x
-        push reg stack
-        evaluate reg stack tmp y
-        push reg stack
-        applyBinary reg stack tmp op
-    Abs x -> do
-        evaluate reg stack tmp x
-        abs reg
 
 -- Instructions
 and   rX dmemaddr = write 0b000001 (register rX .|. address dmemaddr)
