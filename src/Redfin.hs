@@ -41,7 +41,7 @@ import Data.SBV
 
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
-type Value = SWord64
+type Value = SInt64
 
 -- | The 'UImm5' datatype represents 5-bit unsigned immediate arguments that are
 -- used by the 'Redfin.Semantics.pmac' instruction.
@@ -68,13 +68,13 @@ type SImm10 = SInt16
 type Register = SWord8
 
 -- | The register bank is represented by a map from registers to their values.
-type RegisterBank = SFunArray Word8 Word64
+type RegisterBank = SFunArray Word8 Int64
 
 -- | Redfin memory can hold 256 values.
 type MemoryAddress = SWord8
 
 -- | The memory is represented by a map from memory addresses to their values.
-type Memory = SFunArray Word8 Word64
+type Memory = SFunArray Word8 Int64
 
 -- | Programs are stored in program memory (currently, up to 1024 instructions).
 type InstructionAddress = SWord16
