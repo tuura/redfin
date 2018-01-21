@@ -37,16 +37,3 @@ library
     other-extensions:   BinaryLiterals
                         DeriveFunctor
     GHC-options:        -O2 -Wall -fwarn-tabs
-
-test-suite test-verification
-    hs-source-dirs:     test
-    type:               exitcode-stdio-1.0
-    main-is:            Verify.hs
-    other-modules:      Common
-                        DeriveFunctor
-    build-depends:      redfin,
-                        base       >= 4.8 && < 5,
-                        containers == 0.5.*,
-                        sbv        >= 5.14
-    default-language:   Haskell2010
-    GHC-options:        -O2 -Wall -fwarn-tabs
