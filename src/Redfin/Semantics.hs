@@ -13,6 +13,8 @@ module Redfin.Semantics (
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
     fadd, fsub, fmul, fdiv,
+    abs,
+
     -- * Logical bit-wise instructions
     Redfin.Semantics.and, Redfin.Semantics.or,
     Redfin.Semantics.xor, Redfin.Semantics.not,
@@ -34,7 +36,8 @@ module Redfin.Semantics (
 import Control.Monad.Extra
 import qualified Data.Bits as Std
 import Data.Bits hiding (xor)
-import Prelude hiding (div, not)
+import Prelude hiding (div, not, abs)
+import qualified Prelude (abs)
 import Data.SBV
 
 import Redfin
@@ -122,6 +125,7 @@ fmul _rX _dmemaddr =
 fdiv :: Register -> MemoryAddress -> Redfin ()
 fdiv _rX _dmemaddr = do
     error "Fixed precicion arithmetic unimplemented"
+
     -- delay 100
     -- writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
 
@@ -140,6 +144,13 @@ xor rX dmemaddr = writeRegister rX <~ (readRegister rX, Std.xor, readMemory dmem
 -- | Instruction @not rX, dmemaddr@ is implemented as @rX = ~rX@.
 not :: Register -> Redfin ()
 not rX = writeRegister rX =<< (complement <$> readRegister rX)
+
+-- | Instruction @abd rX, dmemaddr@ is implemented as @rX = abs(rX)@.
+abs :: Register -> Redfin ()
+abs rX = writeRegister rX =<< (Prelude.abs <$> readRegister rX)
+    -- where
+    --     absValue :: Value -> Value
+    --     absValue =
 
 -- | Instruction @sl rX, dmemaddr@ is implemented as @rX = rX << [dmemaddr]@.
 sl :: Register -> MemoryAddress -> Redfin ()
@@ -232,7 +243,7 @@ jmpi_cf simm = do
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()
-wait uimm = delay (fromUImm10 uimm)
+wait uimm = undefined -- delay (fromUImm10 uimm)
 
 -- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
 -- more meaningful implementation, for example, by raising the @Halt@ flag.

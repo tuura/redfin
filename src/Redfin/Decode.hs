@@ -100,7 +100,8 @@ decode code state = transformA
         [ (A.wait, S.wait) ]
     goG k (a, s) = ite (A.topOpcode (a 0) .== opcode) (snd $ redfin (s register) state) k
     transformG = foldl' goG (snd $ redfin illegal state)
-        [ (A.not, S.not) ]
+        [ (A.not, S.not)
+        , (A.abs, S.abs) ]
 
 pad :: Int -> [SBool]
 pad k = replicate k false
