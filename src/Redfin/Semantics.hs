@@ -141,10 +141,12 @@ not rX = writeRegister rX =<< (complement <$> readRegister rX)
 
 -- | Instruction @abd rX, dmemaddr@ is implemented as @rX = abs(rX)@.
 abs :: Register -> Redfin ()
-abs rX = writeRegister rX =<< (Prelude.abs <$> readRegister rX)
-    -- where
-    --     absValue :: Value -> Value
-    --     absValue =
+abs rX = do
+    state <- readState
+    result <- Prelude.abs <$> readRegister rX
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite (result .< 0) overflowState state
+    writeRegister rX result
 
 -- | Instruction @sl rX, dmemaddr@ is implemented as @rX = rX << [dmemaddr]@.
 sl :: Register -> MemoryAddress -> Redfin ()
