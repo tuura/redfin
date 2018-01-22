@@ -93,15 +93,11 @@ mul_si rX simm = writeRegister rX <~ (readRegister rX, (*), pure $ fromSImm8 sim
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
 div :: Register -> MemoryAddress -> Redfin ()
-div rX dmemaddr = do
-    delay 100
-    writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
+div rX dmemaddr = writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
 
 -- | Instruction @div_si rX, simm@ is implemented as @rX = rX / simm@.
 div_si :: Register -> SImm8 -> Redfin ()
-div_si rX simm = do
-    delay 100
-    writeRegister rX <~ (readRegister rX, sDiv, pure $ fromSImm8 simm)
+div_si rX simm = writeRegister rX <~ (readRegister rX, sDiv, pure $ fromSImm8 simm)
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 fadd :: Register -> MemoryAddress -> Redfin ()
@@ -125,8 +121,6 @@ fmul _rX _dmemaddr =
 fdiv :: Register -> MemoryAddress -> Redfin ()
 fdiv _rX _dmemaddr = do
     error "Fixed precicion arithmetic unimplemented"
-
-    -- delay 100
     -- writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
@@ -222,7 +216,6 @@ jmpi simm =
     transformState $ \(State rs  ic                    ir fs m p c)
                     -> State rs (ic + fromSImm10 simm) ir fs m p c
 
-
 -- | Instruction @jmpi_ct simm@ is implemented as
 -- @if Condition: InstructionCounter = InstructionCounter + simm + 1@.
 jmpi_ct :: SImm10 -> Redfin ()
@@ -243,7 +236,7 @@ jmpi_cf simm = do
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()
-wait uimm = undefined -- delay (fromUImm10 uimm)
+wait _uimm = error "wait is not yet implemented" -- delay (fromUImm10 uimm)
 
 -- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
 -- more meaningful implementation, for example, by raising the @Halt@ flag.
