@@ -35,6 +35,10 @@ module Redfin.Assembly (
 
     -- * Miscellaneous instructions
     wait, halt,
+
+    -- * export for the purouse of Redfin.Listing
+    --   TODO: refactor and remove this import
+    runWriter
     )where
 
 import Control.Monad
