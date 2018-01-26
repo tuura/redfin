@@ -50,6 +50,8 @@ equivalence = proveWith prover $ do
     p2 <- forall "p2"
     constrain $ t1 .>= 0 &&& t1 .<= 2 ^ (32 :: Int)
     constrain $ t2 .>= 0 &&& t2 .<= 2 ^ (32 :: Int)
+    constrain $ t1 .>= 0 &&& t1 .<= 948672000000
+    constrain $ t2 .>= 0 &&& t2 .<= 948672000000
     constrain $ p1 .>= 0 &&& p1 .<= 1000
     constrain $ p2 .>= 0 &&& p2 .<= 1000
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2)]
@@ -66,6 +68,8 @@ theorem = proveWith prover $ do
     p2 <- forall "p2"
     constrain $ t1 .>= 0 &&& t1 .<= 2 ^ (32 :: Int)
     constrain $ t2 .>= 0 &&& t2 .<= 2 ^ (32 :: Int)
+    constrain $ t1 .>= 0 &&& t1 .<= 948672000000
+    constrain $ t2 .>= 0 &&& t2 .<= 948672000000
     constrain $ p1 .>= 0 &&& p1 .<= 1000
     constrain $ p2 .>= 0 &&& p2 .<= 1000
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2)]
@@ -83,6 +87,26 @@ simulate = do
     pPrint memoryDump
     putStrLn $ "Estimated energy: " ++ show (readArray (registers finalState) 0)
     putStrLn $ "Clock: " ++ show (clock finalState)
+
+-------------- Energy Estimate WCET analysis -----------------------------------
+worstCaseClock :: IO OptimizeResult
+worstCaseClock = optimize Lexicographic $ do
+    t1 <- sInt64 "t1"
+    t2 <- sInt64 "t2"
+    p1 <- sInt64 "p1"
+    p2 <- sInt64 "p2"
+    constrain $ t1 .>= 0 &&& t1 .<= 948672000000
+    constrain $ t2 .>= 0 &&& t2 .<= 948672000000
+    constrain $ p1 .>= 0 &&& p1 .<= 1000
+    constrain $ p2 .>= 0 &&& p2 .<= 1000
+    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+        steps = 100
+        finalStateHL = verify steps $ templateState energyEstimate mem
+        finalStateLL = verify steps $ templateState energyEstimateLowLevel mem
+    maximize "Max clock HL" $ clock finalStateHL
+    -- maximize "Max clock LL" $ clock finalStateLL
+    -- minimize "Min clock HL" $ clock finalStateHL
+    -- minimize "Min clock LL" $ clock finalStateLL
 
 -- An alternative to defining these orphan instances is to switch to SBV's type
 -- class SDivisible instead. Even better is to fix Haskell's class hierarchy.
