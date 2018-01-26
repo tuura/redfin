@@ -17,13 +17,13 @@ energyEstimateFormula t1 t2 p1 p2 = abs (t1 - t2) * (p1 + p2) `div` 2
 
 energyEstimate :: Script
 energyEstimate = do
-    let t1 = read $ IntegerVariable 0
-        t2 = read $ IntegerVariable 1
-        p1 = read $ IntegerVariable 2
-        p2 = read $ IntegerVariable 3
-        t  = Temporary 4
-        s = Stack 100
-    compile r0 s t $ energyEstimateFormula t1 t2 p1 p2
+    let t1    = read $ IntegerVariable 0
+        t2    = read $ IntegerVariable 1
+        p1    = read $ IntegerVariable 2
+        p2    = read $ IntegerVariable 3
+        temp  = Temporary 4
+        stack = Stack 5
+    compile r0 stack temp (energyEstimateFormula t1 t2 p1 p2)
     halt
 
 energyEstimateLowLevel :: Script
@@ -39,7 +39,7 @@ energyEstimateLowLevel = do
     add r1 p2
     st r1 p2
     mul r0 p2
-    div_si r0 2
+    sra_i r0 1
     halt
 
 equivalence :: IO ThmResult

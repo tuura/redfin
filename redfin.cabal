@@ -18,6 +18,7 @@ library
     exposed-modules:    Redfin
                         Redfin.Assembly
                         Redfin.Decode
+                        Redfin.Language.Examples.Common
                         Redfin.Language.Examples.Energy
                         Redfin.Language.Expression
                         Redfin.Semantics
