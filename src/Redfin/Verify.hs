@@ -18,7 +18,7 @@ import Redfin.Decode
 
 verify :: Int -> State -> State
 verify steps state
-    | steps == 0 = state
+    | steps <= 0 = state
     | otherwise  = ite halted state (verify (steps - 1) nextState)
   where
     halted    = readArray (flags state) (flagId Halt)
