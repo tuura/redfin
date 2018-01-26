@@ -13,7 +13,7 @@ import Redfin.Language.Expression
 import Redfin.Language.Examples.Common
 
 energyEstimateFormula :: (Integral a, Num a) => a -> a -> a -> a -> a
-energyEstimateFormula t1 t2 p1 p2 = abs (t1 - t2) * (p1 + p2) `div` 2
+energyEstimateFormula t1 t2 p1 p2 = abs (t2 - t1) * (p1 + p2) `div` 2
 
 energyEstimate :: Script
 energyEstimate = do
@@ -48,8 +48,6 @@ equivalence = proveWith prover $ do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= 2 ^ (32 :: Int)
-    constrain $ t2 .>= 0 &&& t2 .<= 2 ^ (32 :: Int)
     constrain $ t1 .>= 0 &&& t1 .<= 948672000000
     constrain $ t2 .>= 0 &&& t2 .<= 948672000000
     constrain $ p1 .>= 0 &&& p1 .<= 1000
@@ -66,8 +64,6 @@ theorem = proveWith prover $ do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= 2 ^ (32 :: Int)
-    constrain $ t2 .>= 0 &&& t2 .<= 2 ^ (32 :: Int)
     constrain $ t1 .>= 0 &&& t1 .<= 948672000000
     constrain $ t2 .>= 0 &&& t2 .<= 948672000000
     constrain $ p1 .>= 0 &&& p1 .<= 1000

@@ -34,8 +34,8 @@ templateState src mem = State
     }
 
 prover :: SMTConfig
-prover = z3 { verbose   = True
-            , smtFile   = Just "example.smt2"
-            , timing    = True
+prover = z3 { verbose = True
+            , redirectVerbose = Just "example.smt2"
+            , timing = PrintTiming
             , printBase = 10
             }
