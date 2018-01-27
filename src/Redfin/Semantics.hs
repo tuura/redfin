@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Semantics
@@ -69,35 +70,103 @@ fromUImm10 u = fromBitsLE $ (take 10 $ blastLE u) ++ pad 54
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 add :: Register -> MemoryAddress -> Redfin ()
-add rX dmemaddr = writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
+add rX dmemaddr = do
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- readMemory dmemaddr
+    let overflow = arg2 .> 0 &&& arg1 .> (maxBound @Value - arg2) |||
+                   arg2 .< 0 &&& arg1 .< (minBound @Value - arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (arg1 + arg2)
 
 -- | Instruction @add_si rX, simm@ is implemented as @rX = rX + simm@.
 add_si :: Register -> SImm8 -> Redfin ()
-add_si rX simm = writeRegister rX <~ (readRegister rX, (+), pure $ fromSImm8 simm)
+add_si rX simm = do
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- pure $ fromSImm8 simm
+    let overflow = arg2 .> 0 &&& arg1 .> (maxBound @Value - arg2) |||
+                   arg2 .< 0 &&& arg1 .< (minBound @Value - arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (arg1 + arg2)
 
 -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
 sub :: Register -> MemoryAddress -> Redfin ()
-sub rX dmemaddr = writeRegister rX <~ (readRegister rX, (-), readMemory dmemaddr)
+sub rX dmemaddr = do
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- readMemory dmemaddr
+    let overflow = arg2 .> 0 &&& arg1 .< (minBound @Value + arg2) |||
+                   arg2 .< 0 &&& arg1 .> (maxBound @Value + arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (arg1 - arg2)
 
 -- | Instruction @sub_si rX, simm@ is implemented as @rX = rX - simm@.
 sub_si :: Register -> SImm8 -> Redfin ()
-sub_si rX simm = writeRegister rX <~ (readRegister rX, (-), pure $ fromSImm8 simm)
+sub_si rX simm = do --writeRegister rX <~~ (readRegister rX, (-), )
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- pure $ fromSImm8 simm
+    let overflow = arg2 .> 0 &&& arg1 .< (minBound @Value + arg2) |||
+                   arg2 .< 0 &&& arg1 .> (maxBound @Value + arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (arg1 - arg2)
 
 -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
 mul :: Register -> MemoryAddress -> Redfin ()
-mul rX dmemaddr = writeRegister rX <~ (readRegister rX, (*), readMemory dmemaddr)
+mul rX dmemaddr = do -- writeRegister rX <~~ (readRegister rX, (*), readMemory dmemaddr)
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- readMemory dmemaddr
+    let overflow = arg1 .>  0 &&& arg2 .>  0 &&& arg1 .> sDiv (maxBound @Value) arg2
+               ||| arg1 .>  0 &&& arg2 .<= 0 &&& arg2 .< sDiv (minBound @Value) arg1
+               ||| arg1 .<= 0 &&& arg2 .>  0 &&& arg1 .< sDiv (minBound @Value) arg2
+               ||| arg1 .<= 0 &&& arg2 .<= 0 &&& arg1 ./= 0
+                                             &&& arg2 .< sDiv (maxBound @Value) arg1
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (arg1 * arg2)
 
 -- | Instruction @mul_si rX, simm@ is implemented as @rX = rX * simm@.
 mul_si :: Register -> SImm8 -> Redfin ()
-mul_si rX simm = writeRegister rX <~ (readRegister rX, (*), pure $ fromSImm8 simm)
+mul_si rX simm = do
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- pure $ fromSImm8 simm
+    let overflow = arg1 .>  0 &&& arg2 .>  0 &&& arg1 .> sDiv (maxBound @Value) arg2
+               ||| arg1 .>  0 &&& arg2 .<= 0 &&& arg2 .< sDiv (minBound @Value) arg1
+               ||| arg1 .<= 0 &&& arg2 .>  0 &&& arg1 .< sDiv (minBound @Value) arg2
+               ||| arg1 .<= 0 &&& arg2 .<= 0 &&& arg1 ./= 0
+                                             &&& arg2 .< sDiv (maxBound @Value) arg1
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (arg1 * arg2)
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
 div :: Register -> MemoryAddress -> Redfin ()
-div rX dmemaddr = writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
+div rX dmemaddr = do
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- readMemory dmemaddr
+    let overflow = arg2 .== 0 ||| arg1 .== minBound @Value &&& arg2 .== -1
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (sDiv arg1 arg2)
 
 -- | Instruction @div_si rX, simm@ is implemented as @rX = rX / simm@.
 div_si :: Register -> SImm8 -> Redfin ()
-div_si rX simm = writeRegister rX <~ (readRegister rX, sDiv, pure $ fromSImm8 simm)
+div_si rX simm = do
+    state <- readState
+    arg1 <- readRegister rX
+    arg2 <- pure $ fromSImm8 simm
+    let overflow = arg2 .== 0 ||| arg1 .== minBound @Value &&& arg2 .== -1
+    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    writeState $ ite overflow overflowState state
+    writeRegister rX (sDiv arg1 arg2)
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 fadd :: Register -> MemoryAddress -> Redfin ()
