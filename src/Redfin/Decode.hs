@@ -9,7 +9,14 @@
 -- REDFIN instruction set.
 --
 -----------------------------------------------------------------------------
-module Redfin.Decode (executeInstruction) where
+module Redfin.Decode (
+    executeInstruction,
+
+    -- * export for the purouse of Redfin.Listing
+    --   TODO: refactor and remove this import
+    decodeOpcode, decodeRegister, decodeMemoryAddress, decodeSImm8,
+    decodeSImm10, decodeUImm8, decodeUImm10
+    ) where
 
 import Data.Foldable
 import Data.SBV

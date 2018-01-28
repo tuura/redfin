@@ -1,9 +1,10 @@
 {-# LANGUAGE BinaryLiterals #-}
 
 module Redfin.Listing (
-    showInstruction, showScript
+    showInstructionCode, showScript
 ) where
 
+import Redfin
 import Redfin.Assembly
 import Redfin.Decode
 

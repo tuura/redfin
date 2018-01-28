@@ -21,10 +21,13 @@ library
                         Redfin.Language.Expression
                         Redfin.Semantics
                         Redfin.Verify
+
+                        Redfin.Examples.Common
                         Redfin.Examples.Energy
                         Redfin.Examples.Energy.WCET
                         Redfin.Examples.Energy.OverflowHunt
-    other-modules:      Redfin.Examples.Common
+                        Redfin.Examples.ManhattanDistance
+                        Redfin.Examples.Sum
     build-depends:      base       >= 4.8 && < 5,
                         containers >= 0.5.7,
                         extra,
