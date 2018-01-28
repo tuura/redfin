@@ -239,7 +239,7 @@ sra rX dmemaddr = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, 
 
 -- | Instruction @sra_i rX, uimm@ is implemented as @rX = (int)rX >> uimm@.
 sra_i :: Register -> UImm8 -> Redfin ()
-sra_i rX uimm = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, pure $ fromUImm8 uimm)
+sra_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftRight, pure $ fromUImm8 uimm)
 
 -- | Instruction @cmpeq rX, dmemaddr@ is implemented as @cond = (rX == [dmemaddr])@.
 cmpeq :: Register -> MemoryAddress -> Redfin ()
