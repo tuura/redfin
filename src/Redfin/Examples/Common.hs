@@ -1,4 +1,4 @@
-module Redfin.Language.Examples.Common where
+module Redfin.Examples.Common where
 
 import Data.SBV
 import Redfin

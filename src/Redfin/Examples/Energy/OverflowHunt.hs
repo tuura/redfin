@@ -1,16 +1,12 @@
 {-# LANGUAGE TypeApplications #-}
-module Redfin.Language.Examples.OverflowHunt where
+module Redfin.Examples.Energy.OverflowHunt where
 
 import Prelude hiding (read)
-import Text.Pretty.Simple (pPrint)
 import Data.SBV
 import Redfin
-import Redfin.Assembly hiding (div, abs)
-import qualified Redfin.Assembly as Assembly
 import Redfin.Verify
-import Redfin.Language.Expression
-import Redfin.Language.Examples.Common
-import Redfin.Language.Examples.Energy
+import Redfin.Examples.Common
+import Redfin.Examples.Energy
 
 ---------------- Overflow Hunt -------------------------------------------------
 -- | 't1 - t2' causes an integer overflow
@@ -24,7 +20,7 @@ t1MinusT2overflow = optimize Lexicographic $ do
     constrain $ t1 .< minBound @Value + t2
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalStateHL = verify steps $ templateState energyEstimate mem
+        finalStateHL = verify steps $ templateState energyEstimateHighLevel mem
         overflow = readArray (flags finalStateHL) (flagId Overflow)
     constrain $ overflow .== true
     minimize "t1_min" $ abs t1
@@ -46,7 +42,7 @@ p1PlusP2overflow = optimize Lexicographic $ do
     constrain $ p1 .> maxBound @Value - p2
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalStateHL = verify steps $ templateState energyEstimate mem
+        finalStateHL = verify steps $ templateState energyEstimateHighLevel mem
         overflow = readArray (flags finalStateHL) (flagId Overflow)
     constrain $ overflow .== true
     minimize "p1_min" $ abs p1
@@ -67,7 +63,7 @@ absOverflow = optimize Lexicographic $ do
     constrain $ t1 - t2 .== minBound @Value
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalStateHL = verify steps $ templateState energyEstimate mem
+        finalStateHL = verify steps $ templateState energyEstimateHighLevel mem
         overflow = readArray (flags finalStateHL) (flagId Overflow)
     constrain $ overflow .== true
     minimize "t1_min" $ abs t1
@@ -96,7 +92,7 @@ mulOverflow = optimize Lexicographic $ do
     constrain $ x .> (maxBound @Value) `sDiv` y
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalStateHL = verify steps $ templateState energyEstimate mem
+        finalStateHL = verify steps $ templateState energyEstimateHighLevel mem
         overflow = readArray (flags finalStateHL) (flagId Overflow)
     constrain $ overflow .== true
     minimize "t1_min" $ abs t1
