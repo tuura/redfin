@@ -28,10 +28,7 @@ energyEstimate = do
 
 energyEstimateLowLevel :: Script
 energyEstimateLowLevel = do
-    let t1 = 0
-        t2 = 1
-        p1 = 2
-        p2 = 3
+    let { t1 = 0; t2 = 1; p1 = 2; p2 = 3 }
     ld r0 t1
     sub r0 t2
     Assembly.abs r0
