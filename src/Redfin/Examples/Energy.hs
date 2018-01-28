@@ -2,7 +2,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Redfin.Examples.Energy (
         energyEstimate, energyEstimateHighLevel, energyEstimateLowLevel,
-        equivalence, highLevelCorrect, simulateHighLevel
+        equivalence, highLevelFaultyExample, highLevelCorrect,
+        simulateHighLevel
     ) where
 
 import Prelude hiding (read)
@@ -73,11 +74,10 @@ highLevelFaultyExample = proveWith prover $ do
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
         finalState = verify steps $ templateState energyEstimateHighLevel mem
-    --     result = readArray (registers finalState) 0
-    --     overflow = readArray (flags finalState) (flagId Overflow)
-    -- pure $   bnot overflow
-    --      &&& result .>= 0
-    pure $ (energyEstimate t1 t2 p1 p2) .> 0
+        result = readArray (registers finalState) 0
+        overflow = readArray (flags finalState) (flagId Overflow)
+    pure $   bnot overflow
+         &&& result .>= 0
 
 highLevelCorrect :: IO ThmResult
 highLevelCorrect = proveWith prover $ do
