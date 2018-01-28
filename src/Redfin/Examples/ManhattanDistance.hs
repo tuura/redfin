@@ -28,8 +28,8 @@ distanceHighLevel = do
     compile r0 stack temp (distance xs ys)
     halt
 
-faultyExample :: IO ThmResult
-faultyExample = proveWith prover $ do
+faultyExample :: Symbolic SBool
+faultyExample = do
     let xsNames = map (("x" ++) . show) [1..pointsCount]
         ysNames = map (("y" ++) . show) [1..pointsCount]
     xs <- symbolics xsNames
@@ -42,8 +42,8 @@ faultyExample = proveWith prover $ do
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $ halted &&& bnot overflow
 
-noOverflow :: IO ThmResult
-noOverflow = proveWith prover $ do
+noOverflow :: Symbolic SBool
+noOverflow = do
     let xsNames = map (("x" ++) . show) [1..pointsCount]
         ysNames = map (("y" ++) . show) [1..pointsCount]
     xs <- symbolics xsNames
@@ -55,8 +55,8 @@ noOverflow = proveWith prover $ do
         result = readArray (registers finalState) 0
     pure $ result .== distance xs ys
 
-equivHaskell :: IO ThmResult
-equivHaskell = proveWith prover $ do
+equivHaskell :: Symbolic SBool
+equivHaskell = do
     let xsNames = map (("x" ++) . show) [1..pointsCount]
         ysNames = map (("y" ++) . show) [1..pointsCount]
     xs <- symbolics xsNames

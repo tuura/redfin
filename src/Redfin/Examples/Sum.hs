@@ -29,8 +29,8 @@ type Constrain = Value -> Symbolic ()
 
 type Statement = State -> SBool
 
-sumArrayTheorem :: Constrain -> Statement -> IO ThmResult
-sumArrayTheorem constr statement = proveWith prover $ do
+sumArrayTheorem :: Constrain -> Statement -> Symbolic SBool
+sumArrayTheorem constr statement = do
     let names = map (("x" ++) . show) [1..arraySize]
     summands <- symbolics names
     -- constrain xs to be in [0, 1000]
@@ -43,7 +43,7 @@ sumArrayTheorem constr statement = proveWith prover $ do
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $ statement finalState
 
-faultyExample :: IO ThmResult
+faultyExample :: Symbolic SBool
 faultyExample =
     let constr    x     = constrain true
         statement state =
@@ -52,7 +52,7 @@ faultyExample =
             in halted &&& bnot overflow
     in sumArrayTheorem constr statement
 
-noOverflow :: IO ThmResult
+noOverflow :: Symbolic SBool
 noOverflow =
     let constr    x     = constrain (x .>= 0 &&& x .<= 1000)
         statement state =
@@ -61,8 +61,8 @@ noOverflow =
             in halted &&& bnot overflow
     in sumArrayTheorem constr statement
 
-equivHaskell :: IO ThmResult
-equivHaskell = proveWith prover $ do
+equivHaskell :: Symbolic SBool
+equivHaskell = do
     let names = map (("x" ++) . show) [1..arraySize]
     summands <- symbolics names
     -- constrain xs to be in [0, 1000]

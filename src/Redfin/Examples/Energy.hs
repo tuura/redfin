@@ -44,8 +44,8 @@ energyEstimateLowLevel = do
     -- div_si r0 2
     halt
 
-equivalence :: IO ThmResult
-equivalence = proveWith prover $ do
+equivalence :: Symbolic SBool
+equivalence = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
@@ -63,8 +63,8 @@ equivalence = proveWith prover $ do
     -- pure $ resultHL .== energyEstimate t1 t2 p1 p2 -- resultHL
     pure $ resultLL .== resultHL
 
-highLevelFaultyExample :: IO ThmResult
-highLevelFaultyExample = proveWith prover $ do
+highLevelFaultyExample :: Symbolic SBool
+highLevelFaultyExample = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
@@ -79,8 +79,8 @@ highLevelFaultyExample = proveWith prover $ do
     pure $   bnot overflow
          &&& result .>= 0
 
-highLevelCorrect :: IO ThmResult
-highLevelCorrect = proveWith prover $ do
+highLevelCorrect :: Symbolic SBool
+highLevelCorrect = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
