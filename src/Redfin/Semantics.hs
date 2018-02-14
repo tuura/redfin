@@ -42,6 +42,7 @@ import qualified Prelude (abs)
 import Data.SBV
 
 import Redfin
+import Redfin.Fixed
 
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
@@ -170,27 +171,31 @@ div_si rX simm = do
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 fadd :: Register -> MemoryAddress -> Redfin ()
-fadd _rX _dmemaddr =
-    error "Fixed precicion arithmetic unimplemented"
-    -- writeRegister rX <~ (readRegister rX, (+), readMemory dmemaddr)
+fadd rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 + arg2)
 
 -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
 fsub :: Register -> MemoryAddress -> Redfin ()
-fsub _rX _dmemaddr =
-    error "Fixed precicion arithmetic unimplemented"
-    -- writeRegister rX <~ (readRegister rX, (-), readMemory dmemaddr)
+fsub rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 - arg2)
 
 -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
 fmul :: Register -> MemoryAddress -> Redfin ()
-fmul _rX _dmemaddr =
-    error "Fixed precicion arithmetic unimplemented"
-    -- writeRegister rX <~ (readRegister rX, (*), readMemory dmemaddr)
+fmul rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 * arg2)
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
 fdiv :: Register -> MemoryAddress -> Redfin ()
-fdiv _rX _dmemaddr = do
-    error "Fixed precicion arithmetic unimplemented"
-    -- writeRegister rX <~ (readRegister rX, sDiv, readMemory dmemaddr)
+fdiv rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 / arg2)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
 and :: Register -> MemoryAddress -> Redfin ()
@@ -239,7 +244,7 @@ sra rX dmemaddr = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, 
 
 -- | Instruction @sra_i rX, uimm@ is implemented as @rX = (int)rX >> uimm@.
 sra_i :: Register -> UImm8 -> Redfin ()
-sra_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftRight, pure $ fromUImm8 uimm)
+sra_i rX uimm = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, pure $ uimm)
 
 -- | Instruction @cmpeq rX, dmemaddr@ is implemented as @cond = (rX == [dmemaddr])@.
 cmpeq :: Register -> MemoryAddress -> Redfin ()
