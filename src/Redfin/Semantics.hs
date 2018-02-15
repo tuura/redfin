@@ -42,7 +42,7 @@ import qualified Prelude (abs)
 import Data.SBV
 
 import Redfin
-import Redfin.Fixed
+import Redfin.Data.Fixed
 
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
