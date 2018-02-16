@@ -29,6 +29,7 @@ import qualified Prelude (abs, div)
 
 import Redfin
 import Redfin.Assembly
+import qualified Redfin.Data.Fixed as Fixed
 
 -- We distinguish between fixed-point and integer values
 data ValueType = FPType | IntType
@@ -40,6 +41,10 @@ newtype Stack     = Stack     MemoryAddress
 data Variable :: ValueType -> * where
     IntegerVariable    :: MemoryAddress -> Variable IntType
     FixedPointVariable :: MemoryAddress -> Variable FPType
+
+data Literal :: ValueType -> * where
+    IntegerLiteral    :: SImm8 -> Literal IntType
+    FixedPointLiteral :: SImm8 -> Literal FPType
 
 -- Pushes the value stored in the register to the stack, advances the stack
 -- pointer, and destroys the value stored in the register.
@@ -74,13 +79,13 @@ applyBinary reg stack (Temporary tmp) op = do
 -- TODO: Add support for register-immediate operators
 -- TODO: Generalise Abs to arbitrary unary constructors
 data Expression :: ValueType -> * where
-    Lit :: SImm8          -> Expression a
+    Lit :: Literal  a     -> Expression a
     Var :: Variable a     -> Expression a
     Bin :: BinaryOperator -> Expression a -> Expression a -> Expression a
     Abs :: Expression a   -> Expression a
 
 instance Num (Expression IntType) where
-    fromInteger = Lit . fromIntegral
+    fromInteger = Lit . IntegerLiteral . fromIntegral
     (+)         = Bin add
     (-)         = Bin sub
     (*)         = Bin mul
@@ -106,7 +111,7 @@ instance Integral (Expression IntType) where
     toInteger = error "quotRem cannot be implemented for Expression IntType"
 
 instance Num (Expression FPType) where
-    fromInteger = Lit . fromIntegral
+    fromInteger = Lit . FixedPointLiteral . fromInteger
     (+)         = Bin fadd
     (-)         = Bin fsub
     (*)         = Bin fmul
@@ -120,9 +125,13 @@ instance Fractional (Expression FPType) where
 read :: Variable a -> Expression a
 read = Var
 
+-- | Compile high-level expression to assembly.
 compile :: Register -> Stack -> Temporary -> Expression a -> Script
 compile reg stack tmp expr = case expr of
-    Lit value -> ld_si reg value
+    Lit (IntegerLiteral    value) -> ld_si reg value
+    Lit (FixedPointLiteral value) -> do
+        ld_si reg value
+        sl_i  reg (literal Fixed.fracBits) -- interpret literal value as a fixed-point number
     Var (IntegerVariable    var) -> ld reg var
     Var (FixedPointVariable var) -> ld reg var
     Bin op x y -> do
