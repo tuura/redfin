@@ -1,3 +1,6 @@
 packages:
 - '.'
 resolver: lts-10.3
+extra-deps:
+- units-2.4.1
+- units-defs-2.0.1.1

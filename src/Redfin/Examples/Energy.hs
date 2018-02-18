@@ -8,7 +8,7 @@ module Redfin.Examples.Energy (
 
 import Prelude hiding (read)
 import Text.Pretty.Simple (pPrint)
-import Data.SBV
+import Data.SBV hiding ((%), (#))
 import Redfin
 import Redfin.Assembly hiding (div, abs)
 import Redfin.Listing
@@ -16,6 +16,7 @@ import qualified Redfin.Assembly as Assembly
 import Redfin.Verify
 import Redfin.Data.Fixed
 import Redfin.Language.Expression
+import Redfin.Language.Units
 import Redfin.Examples.Common
 
 energyEstimate :: Integral a => a -> a -> a -> a -> a
@@ -57,8 +58,10 @@ energyEstimateLowLevel = do
     st r1 p2
     mul r0 p2
     sra_i r0 1
-    div_si r0 2
     halt
+
+-- t :: Fixed
+-- t = (30 % Year) # Second
 
 equivalence :: Symbolic SBool
 equivalence = do
@@ -66,10 +69,10 @@ equivalence = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= 948672000000
-    constrain $ t2 .>= 0 &&& t2 .<= 948672000000
-    constrain $ p1 .>= 0 &&& p1 .<= 1000
-    constrain $ p2 .>= 0 &&& p2 .<= 1000
+    constrain $ t1 .>= 0 &&& t1 .<= getFixed ((30 % Year :: Time) # Second)
+    constrain $ t2 .>= 0 &&& t2 .<= getFixed ((30 % Year :: Time) # Second)
+    constrain $ p1 .>= 0 &&& p1 .<= getFixed ((1 % Watt :: Power) # milli Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= getFixed ((1 % Watt :: Power) # milli Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
         finalStateLL = verify steps $ templateState energyEstimateLowLevel mem
@@ -101,10 +104,10 @@ highLevelCorrect = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= 948672000000
-    constrain $ t2 .>= 0 &&& t2 .<= 948672000000
-    constrain $ p1 .>= 0 &&& p1 .<= 1000
-    constrain $ p2 .>= 0 &&& p2 .<= 1000
+    constrain $ t1 .>= 0 &&& t1 .<= getFixed ((30 % Year :: Time) # Second)
+    constrain $ t2 .>= 0 &&& t2 .<= getFixed ((30 % Year :: Time) # Second)
+    constrain $ p1 .>= 0 &&& p1 .<= getFixed ((1 % Watt :: Power) # milli Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= getFixed ((1 % Watt :: Power) # milli Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
         finalState = verify steps $ templateState energyEstimateHighLevel mem
@@ -112,6 +115,26 @@ highLevelCorrect = do
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   bnot overflow
          &&& result .>= 0
+
+
+highLevelCorrectFP :: Symbolic SBool
+highLevelCorrectFP = do
+    t1 <- forall "t1"
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2"
+    constrain $ t1 .>= 0 &&& t1 .<= getFixed ((30 % Year :: Time) # Second)
+    constrain $ t2 .>= 0 &&& t2 .<= getFixed ((30 % Year :: Time) # Second)
+    constrain $ p1 .>= 0 &&& p1 .<= getFixed ((1 % Watt :: Power) # milli Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= getFixed ((1 % Watt :: Power) # milli Watt)
+    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+        steps = 100
+        finalState = verify steps $ templateState energyEstimateHighLevel mem
+        result = readArray (registers finalState) 0
+        overflow = readArray (flags finalState) (flagId Overflow)
+    pure $
+        -- bnot overflow &&&
+        (Fixed $ result) .>= 0
 
 simulateHighLevel :: IO ()
 simulateHighLevel = do
