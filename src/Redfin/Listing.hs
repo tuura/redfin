@@ -1,18 +1,26 @@
-{-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE BinaryLiterals, OverloadedStrings #-}
 
 module Redfin.Listing (
-    showInstructionCode, showScript
+    showInstructionCode, showScript, prettyPrintScript
 ) where
 
+import qualified Data.Text.Lazy as T
+import Text.Pretty.Simple (pPrint)
 import Redfin
 import Redfin.Assembly
 import Redfin.Decode
 
-showScript :: Script -> String
-showScript script =
-    unlines $ map showInstructionCode $ reverse $ snd $ runWriter script  []
+prettyPrintScript :: Script -> IO ()
+prettyPrintScript = pPrint . showScript
 
--- | TODO: This might be probably unified with 'decode' somehow.
+showScript :: Script -> T.Text
+showScript script =
+    T.replace " :: SInt8"  "" .
+    T.replace " :: SWord8" "" .
+    T.pack . unlines $
+    map showInstructionCode $ reverse $ snd $ runWriter script []
+
+-- | TODO: This might be unified with 'decode' somehow.
 showInstructionCode :: InstructionCode -> String
 showInstructionCode code =
     let opcode       = decodeOpcode code
