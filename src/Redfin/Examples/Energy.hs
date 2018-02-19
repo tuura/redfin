@@ -60,26 +60,22 @@ energyEstimateLowLevel = do
     sra_i r0 1
     halt
 
--- t :: Fixed
--- t = (30 % Year) # Second
-
 equivalence :: Symbolic SBool
 equivalence = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= getFixed ((30 % Year :: Time) # Second)
-    constrain $ t2 .>= 0 &&& t2 .<= getFixed ((30 % Year :: Time) # Second)
-    constrain $ p1 .>= 0 &&& p1 .<= getFixed ((1 % Watt :: Power) # milli Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= getFixed ((1 % Watt :: Power) # milli Watt)
+    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
         finalStateLL = verify steps $ templateState energyEstimateLowLevel mem
         finalStateHL = verify steps $ templateState energyEstimateHighLevel mem
         resultLL = readArray (registers finalStateLL) 0
         resultHL = readArray (registers finalStateHL) 0
-    -- pure $ resultHL .== energyEstimate t1 t2 p1 p2 -- resultHL
     pure $ resultLL .== resultHL
 
 highLevelFaultyExample :: Symbolic SBool
@@ -104,10 +100,10 @@ highLevelCorrect = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= getFixed ((30 % Year :: Time) # Second)
-    constrain $ t2 .>= 0 &&& t2 .<= getFixed ((30 % Year :: Time) # Second)
-    constrain $ p1 .>= 0 &&& p1 .<= getFixed ((1 % Watt :: Power) # milli Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= getFixed ((1 % Watt :: Power) # milli Watt)
+    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
         finalState = verify steps $ templateState energyEstimateHighLevel mem
@@ -123,10 +119,10 @@ highLevelCorrectFP = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= getFixed ((30 % Year :: Time) # Second)
-    constrain $ t2 .>= 0 &&& t2 .<= getFixed ((30 % Year :: Time) # Second)
-    constrain $ p1 .>= 0 &&& p1 .<= getFixed ((1 % Watt :: Power) # milli Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= getFixed ((1 % Watt :: Power) # milli Watt)
+    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
         finalState = verify steps $ templateState energyEstimateHighLevel mem
