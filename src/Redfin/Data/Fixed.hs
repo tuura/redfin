@@ -15,7 +15,7 @@ module Redfin.Data.Fixed (
   Fixed (..),
 
   -- * Conversion to/from Double for printing/initialisation
-  toFixed, fromFixed, unsafeLiteralToFixed, fracBits
+  toFixed, fromFixed, unsafeValueToFixed, unsafeFixedToValue, fracBits
   ) where
 
 import Test.QuickCheck.Arbitrary
@@ -58,8 +58,12 @@ fromFixed (Fixed f) =
 toFixed :: Double -> Fixed
 toFixed x = Fixed . literal $ floor (x * (2 ^ fracBits) + 0.5)
 
-unsafeLiteralToFixed :: Value -> Fixed
-unsafeLiteralToFixed x = Fixed $ sShiftLeft x (literal fracBits)
+unsafeValueToFixed :: Value -> Fixed
+unsafeValueToFixed x = Fixed $ sShiftLeft x (literal fracBits)
+
+unsafeFixedToValue :: Fixed -> Value
+unsafeFixedToValue (Fixed x) =
+  sShiftRight x (literal fracBits)
 
 instance Show Fixed where
   showsPrec d = showsPrec d . fromFixed
