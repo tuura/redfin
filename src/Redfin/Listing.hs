@@ -1,5 +1,15 @@
 {-# LANGUAGE BinaryLiterals, OverloadedStrings #-}
-
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Redfin.Listing
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2018
+--
+-- Maintainer  :  andrey.mokhov@gmail.com
+-- Stability   :  experimental
+--
+-- Pretty-print REDFIN assembly programs.
+--
+-----------------------------------------------------------------------------
 module Redfin.Listing (
     showInstructionCode, showScript, prettyPrintScript
 ) where
@@ -10,9 +20,11 @@ import Redfin
 import Redfin.Assembly
 import Redfin.Decode
 
+-- | Pretty-print a 'Script' to stdout.
 prettyPrintScript :: Script -> IO ()
 prettyPrintScript = pPrint . showScript
 
+-- | Pretty-print a 'Script' to 'Text'.
 showScript :: Script -> T.Text
 showScript script =
     T.replace " :: SInt8"  "" .
@@ -20,7 +32,6 @@ showScript script =
     T.pack . unlines $
     map showInstructionCode $ reverse $ snd $ runWriter script []
 
--- | TODO: This might be unified with 'decode' somehow.
 showInstructionCode :: InstructionCode -> String
 showInstructionCode code =
     let opcode       = decodeOpcode code

@@ -3,7 +3,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Language.Expression
--- Copyright   :  (c) Andrey Mokhov 2018
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2018
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
 -- Stability   :  experimental
@@ -31,10 +31,10 @@ import Redfin
 import Redfin.Assembly
 import qualified Redfin.Data.Fixed as Fixed
 
--- We distinguish between fixed-point and integer values
+-- | We distinguish between fixed-point and integer values
 data ValueType = FPType | IntType
 
--- Temporary, Stack and Variable are all semantically different memory addresses
+-- | Temporary, Stack and Variable are all semantically different memory addresses
 newtype Temporary = Temporary MemoryAddress
 newtype Stack     = Stack     MemoryAddress
 
@@ -42,12 +42,13 @@ data Variable :: ValueType -> * where
     IntegerVariable    :: MemoryAddress -> Variable IntType
     FixedPointVariable :: MemoryAddress -> Variable FPType
 
+-- | Literal values get compiled to immediate arguments
 data Literal :: ValueType -> * where
     IntegerLiteral    :: SImm8 -> Literal IntType
     FixedPointLiteral :: SImm8 -> Literal FPType
 
--- Pushes the value stored in the register to the stack, advances the stack
--- pointer, and destroys the value stored in the register.
+-- | Pushes the value stored in the register to the stack, advances the stack
+--   pointer, and destroys the value stored in the register.
 push :: Register -> Stack -> Script
 push reg (Stack pointer) = do
     stmi reg pointer
@@ -55,8 +56,8 @@ push reg (Stack pointer) = do
     add_si reg 1
     st reg pointer
 
--- Decrements the stack pointer, and loads the value from the top of the stack
--- into the given register.
+-- | Decrements the stack pointer, and loads the value from the top of the stack
+--   into the given register.
 pop :: Register -> Stack -> Script
 pop reg (Stack pointer) = do
     ld reg pointer
@@ -66,8 +67,8 @@ pop reg (Stack pointer) = do
 
 type BinaryOperator = Register -> MemoryAddress -> Script
 
--- Applies a binary operation, such as add, to the two top values stored in
--- stack and returns the result in a register
+-- | Applies a binary operation, such as add, to the two top values stored in
+--   stack and returns the result in a register
 applyBinary :: Register -> Stack -> Temporary -> BinaryOperator -> Script
 applyBinary reg stack (Temporary tmp) op = do
     pop reg stack

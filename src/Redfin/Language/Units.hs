@@ -1,5 +1,20 @@
-{-# LANGUAGE DataKinds, StandaloneDeriving, TypeOperators #-}
-
+{-# LANGUAGE DataKinds, TypeOperators #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Redfin.Language.Units
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2018
+--
+-- Maintainer  :  andrey.mokhov@gmail.com
+-- Stability   :  experimental
+--
+-- Units of measurment for REDFIN programs.
+--
+-- Currently this module defined dimensions and units of measurement relevant
+-- to 'Redfin.Examples.Energy'.
+-- This will be later moved to 'Redfin.Examples.Energy.Units'.
+--
+-- TODO: provide users with facilities to declare their own units.
+-----------------------------------------------------------------------------
 module Redfin.Language.Units (
         -- * Re-export units modules
         -- * This module exports unit definitions according to the SI system of units

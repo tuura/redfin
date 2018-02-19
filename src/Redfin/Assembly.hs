@@ -36,10 +36,10 @@ module Redfin.Assembly (
     -- * Miscellaneous instructions
     wait, halt,
 
-    -- * export for the purouse of Redfin.Listing
+    -- * export for the purpose of Redfin.Listing
     --   TODO: refactor and remove this import
     runWriter
-    )where
+    ) where
 
 import Control.Monad
 import Data.Bits hiding (bit, xor)
@@ -47,8 +47,6 @@ import Data.SBV hiding (label)
 import Prelude hiding (and, div, not, or, abs)
 
 import Redfin
-
--- TODO: Get rid of ad-hoc fromIntegral.
 
 type P = [InstructionCode]
 

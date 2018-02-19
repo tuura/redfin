@@ -22,6 +22,7 @@ library
                         Redfin.Decode
                         Redfin.Listing
                         Redfin.Language.Expression
+                        Redfin.Language.Units
                         Redfin.Verify
 
                         Redfin.Examples.Common
@@ -39,6 +40,7 @@ library
                         pretty-simple,
                         units,
                         units-defs,
+                        QuickCheck,
                         text
     default-language:   Haskell2010
     default-extensions: FlexibleContexts

@@ -34,8 +34,8 @@ fracBits :: Word8
 fracBits = 8
 
 -- | Num instance is strait-forward, the only tricky part is multiplication,
--- | which is performed via unbounded symbolic integer 'Data.SBV.SInteger' data type.
--- | The product later gets shifted to fit into a 64-bit value.
+--   which is performed via unbounded symbolic integer 'Data.SBV.SInteger' data type.
+--   The product later gets shifted to fit into a 64-bit value.
 instance Num Fixed where
   Fixed a + Fixed b = Fixed (a + b)
   Fixed a - Fixed b = Fixed (a - b)
@@ -55,19 +55,19 @@ instance Fractional Fixed where
     (sShiftLeft (fromInteger $ numerator a) (literal fracBits) `sDiv` fromInteger (denominator a))
 
 -- | Unsafe conversion from integer 'Redfin.Value' to a fixed-point number by shifting the
--- | integer part. Use with caution.
+--   integer part. Use with caution.
 unsafeValueToFixed :: Value -> Fixed
 unsafeValueToFixed x = Fixed $ sShiftLeft x (literal fracBits)
 
 -- | Unsafe conversion from fixed-point to integer 'Redfin.Value' by shifting the
--- | fractional part out. Use with caution.
+--   fractional part out. Use with caution.
 unsafeFixedToValue :: Fixed -> Value
 unsafeFixedToValue (Fixed x) =
   sShiftRight x (literal fracBits)
 
 --------------------------- Show-related ---------------------------------------
 -- | Convert from a 'Fixed' precision value to a 'Double'.
--- | Used in the 'Show' instance.
+--   Used in the 'Show' instance.
 fromFixed :: Fixed -> Double
 fromFixed (Fixed f) =
     case unliteral f of
@@ -75,7 +75,7 @@ fromFixed (Fixed f) =
         Nothing -> error "fromFixed: non-literal value."
 
 -- | Convert from a 'Double' to a 'Fixed' precision value
--- | Used for literal initialisation.
+--   Used for literal initialisation.
 toFixed :: Double -> Fixed
 toFixed x = Fixed . literal $ floor (x * (2 ^ fracBits) + 0.5)
 
