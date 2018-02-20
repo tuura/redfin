@@ -16,8 +16,8 @@ import qualified Redfin.Assembly as Assembly
 import Redfin.Verify
 import Redfin.Data.Fixed
 import Redfin.Language.Expression
-import Redfin.Language.Units
 import Redfin.Examples.Common
+import Redfin.Examples.Energy.Units
 
 energyEstimate :: Integral a => a -> a -> a -> a -> a
 energyEstimate t1 t2 p1 p2 = abs (t1 - t2) * (p1 + p2) `div` 2

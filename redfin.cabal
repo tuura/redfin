@@ -22,11 +22,11 @@ library
                         Redfin.Decode
                         Redfin.Listing
                         Redfin.Language.Expression
-                        Redfin.Language.Units
                         Redfin.Verify
 
                         Redfin.Examples.Common
                         Redfin.Examples.Energy
+                        Redfin.Examples.Energy.Units
                         Redfin.Examples.Energy.WCET
                         Redfin.Examples.Energy.OverflowHunt
                         Redfin.Examples.ManhattanDistance

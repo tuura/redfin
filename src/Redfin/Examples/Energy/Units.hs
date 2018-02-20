@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds, TypeOperators #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin.Language.Units
+-- Module      :  Redfin.Examples.Energy.Units
 -- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2018
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
@@ -11,11 +11,8 @@
 --
 -- Currently this module defined dimensions and units of measurement relevant
 -- to 'Redfin.Examples.Energy'.
--- This will be later moved to 'Redfin.Examples.Energy.Units'.
---
--- TODO: provide users with facilities to declare their own units.
 -----------------------------------------------------------------------------
-module Redfin.Language.Units (
+module Redfin.Examples.Energy.Units (
         -- * Re-export units modules
         -- * This module exports unit definitions according to the SI system of units
         --   (Meters, Grams, Seconds etc.)
