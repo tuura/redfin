@@ -9,6 +9,7 @@
 -- Symbolic fixed-point numbers and arithmetic.
 -- The number format is currently fixed to Q56.8,
 -- signed two's complement format with 56 integer and 8 fractional bits.
+-- It is capable of storing numbers from (approx.) segment [-2 ^ 55, 2 ^ 55 - 1]
 -- Implemented on top of 'Data.SBV.SInt64' --- signed two's complement integers.
 -----------------------------------------------------------------------------
 module Redfin.Data.Fixed (
@@ -28,7 +29,7 @@ import Redfin (Value)
 
 -- | Symbolic fixed-point numbers implemented on top of 'type Value = Data.SBV.SInt64'.
 newtype Fixed = Fixed { getFixed :: Value }
-    deriving (EqSymbolic, Mergeable, OrdSymbolic, Arbitrary)
+    deriving (Bounded, EqSymbolic, Mergeable, OrdSymbolic, Arbitrary)
 
 fracBits :: Word8
 fracBits = 8

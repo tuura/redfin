@@ -36,8 +36,6 @@ module Redfin.Assembly (
     -- * Miscellaneous instructions
     wait, halt,
 
-    -- * export for the purpose of Redfin.Listing
-    --   TODO: refactor and remove this import
     runWriter
     ) where
 

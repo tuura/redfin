@@ -170,6 +170,7 @@ div_si rX simm = do
     writeRegister rX (sDiv arg1 arg2)
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
+--   TODO: overflow handling.
 fadd :: Register -> MemoryAddress -> Redfin ()
 fadd rX dmemaddr = do
     arg1 <- Fixed <$> readRegister rX
@@ -177,6 +178,7 @@ fadd rX dmemaddr = do
     writeRegister rX (getFixed $ arg1 + arg2)
 
 -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
+--   TODO: overflow handling.
 fsub :: Register -> MemoryAddress -> Redfin ()
 fsub rX dmemaddr = do
     arg1 <- Fixed <$> readRegister rX
@@ -184,6 +186,7 @@ fsub rX dmemaddr = do
     writeRegister rX (getFixed $ arg1 - arg2)
 
 -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
+--   TODO: overflow handling.
 fmul :: Register -> MemoryAddress -> Redfin ()
 fmul rX dmemaddr = do
     arg1 <- Fixed <$> readRegister rX
@@ -191,6 +194,7 @@ fmul rX dmemaddr = do
     writeRegister rX (getFixed $ arg1 * arg2)
 
 -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
+--   TODO: overflow handling.
 fdiv :: Register -> MemoryAddress -> Redfin ()
 fdiv rX dmemaddr = do
     arg1 <- Fixed <$> readRegister rX

@@ -37,8 +37,6 @@ module Redfin (
 import Control.Monad
 import Data.SBV
 
--- TODO: Unify with the simulation backend.
-
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
 type Value = SInt64
