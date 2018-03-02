@@ -7,7 +7,7 @@ import Redfin
 import Redfin.Assembly hiding (div, abs)
 import qualified Redfin.Assembly as Assembly
 import Redfin.Listing
-import Redfin.Verify
+import Redfin.Simulate
 import Redfin.Language.Expression
 import Redfin.Examples.Common
 
@@ -36,7 +36,7 @@ faultyExample = do
     ys <- symbolics ysNames
     let mem = initialiseMemory (zip [2..] (xs ++ ys) ++ [(1, 100)])
         steps = 1000
-        finalState = verify steps $ templateState distanceHighLevel mem
+        finalState = simulate steps $ boot distanceHighLevel mem
         result = readArray (registers finalState) 0
         halted = readArray (flags finalState) (flagId Halt)
         overflow = readArray (flags finalState) (flagId Overflow)
@@ -51,7 +51,7 @@ noOverflow = do
     mapM_ (\x -> constrain (x .>= 0 &&& x .<= 1000)) (xs ++ ys)
     let mem = initialiseMemory (zip [2..] (xs ++ ys) ++ [(1, 100)])
         steps = 1000
-        finalState = verify steps $ templateState distanceHighLevel mem
+        finalState = simulate steps $ boot distanceHighLevel mem
         result = readArray (registers finalState) 0
     pure $ result .== distance xs ys
 
@@ -64,6 +64,6 @@ equivHaskell = do
     mapM_ (\x -> constrain (x .>= 0 &&& x .<= 1000)) (xs ++ ys)
     let mem = initialiseMemory (zip [2..] (xs ++ ys) ++ [(1, 100)])
         steps = 1000
-        finalState = verify steps $ templateState distanceHighLevel mem
+        finalState = simulate steps $ boot distanceHighLevel mem
         result = readArray (registers finalState) 0
     pure $ result .== distance xs ys

@@ -7,7 +7,7 @@ import Redfin
 import Redfin.Assembly hiding (div, abs)
 import qualified Redfin.Assembly as Assembly
 import Redfin.Listing
-import Redfin.Verify
+import Redfin.Simulate
 import Redfin.Language.Expression
 import Redfin.Examples.Common
 
@@ -37,7 +37,7 @@ sumArrayTheorem constr statement = do
     sequence_ (zipWith ($) (repeat constr) summands)
     let mem = initialiseMemory (zip [2..] summands ++ [(1, 100)])
         steps = 1000
-        finalState = verify steps $ templateState sumArrayHighLevel mem
+        finalState = simulate steps $ boot sumArrayHighLevel mem
         result = readArray (registers finalState) 0
         halted = readArray (flags finalState) (flagId Halt)
         overflow = readArray (flags finalState) (flagId Overflow)
@@ -69,6 +69,6 @@ equivHaskell = do
     mapM_ (\x -> constrain (x .>= 0 &&& x .<= 1000)) summands
     let mem = initialiseMemory (zip [2..] summands ++ [(1, 100)])
         steps = 1000
-        finalState = verify steps $ templateState sumArrayHighLevel mem
+        finalState = simulate steps $ boot sumArrayHighLevel mem
         result = readArray (registers finalState) 0
     pure $ result .== sumArray summands

@@ -22,8 +22,8 @@ dumpMemory from to m = filter ((/=0) . snd) $ zip [0 ..] $ map
     (readArray m)
     [literal from .. literal to]
 
-templateState :: Script -> Memory -> State
-templateState src mem = State
+boot :: Script -> Memory -> State
+boot src mem = State
     { registers           = emptyRegisters
     , instructionCounter  = 0
     , instructionRegister = 0

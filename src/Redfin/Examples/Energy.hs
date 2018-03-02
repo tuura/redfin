@@ -13,7 +13,7 @@ import Redfin
 import Redfin.Assembly hiding (div, abs)
 import Redfin.Listing
 import qualified Redfin.Assembly as Assembly
-import Redfin.Verify
+import Redfin.Simulate
 import Redfin.Data.Fixed
 import Redfin.Language.Expression
 import Redfin.Examples.Common
@@ -72,8 +72,8 @@ equivalence = do
     constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalStateLL = verify steps $ templateState energyEstimateLowLevel mem
-        finalStateHL = verify steps $ templateState energyEstimateHighLevel mem
+        finalStateLL = simulate steps $ boot energyEstimateLowLevel mem
+        finalStateHL = simulate steps $ boot energyEstimateHighLevel mem
         resultLL = readArray (registers finalStateLL) 0
         resultHL = readArray (registers finalStateHL) 0
     pure $ resultLL .== resultHL
@@ -88,7 +88,7 @@ highLevelFaultyExample = do
     constrain $ p2 .>= 0
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalState = verify steps $ templateState energyEstimateHighLevel mem
+        finalState = simulate steps $ boot energyEstimateHighLevel mem
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   bnot overflow
@@ -106,7 +106,7 @@ highLevelCorrect = do
     constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalState = verify steps $ templateState energyEstimateHighLevel mem
+        finalState = simulate steps $ boot energyEstimateHighLevel mem
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   bnot overflow
@@ -125,7 +125,7 @@ highLevelCorrectFP = do
     constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalState = verify steps $ templateState energyEstimateHighLevel mem
+        finalState = simulate steps $ boot energyEstimateHighLevel mem
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $
@@ -138,7 +138,7 @@ simulateHighLevel = do
                                , (1, 5)
                                , (2, 3)
                                , (3, 5), (5, 100)]
-        finalState = verify 100 $ templateState energyEstimateHighLevel mem
+        finalState = simulate 100 $ boot energyEstimateHighLevel mem
         memoryDump = dumpMemory 0 255 $ memory finalState
     putStr "Memory Dump: "
     pPrint memoryDump
@@ -151,7 +151,7 @@ simulateHighLevelFP = do
                                , (1, (getFixed . toFixed) 5)
                                , (2, (getFixed . toFixed) 3)
                                , (3, (getFixed . toFixed) 5), (5, 100)]
-        finalState = verify 100 $ templateState energyEstimateHighLevelFP mem
+        finalState = simulate 100 $ boot energyEstimateHighLevelFP mem
         memoryDump = dumpMemory 0 255 $ memory finalState
     putStr "Memory Dump: "
     pPrint memoryDump

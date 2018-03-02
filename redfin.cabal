@@ -22,7 +22,7 @@ library
                         Redfin.Decode
                         Redfin.Listing
                         Redfin.Language.Expression
-                        Redfin.Verify
+                        Redfin.Simulate
 
                         Redfin.Examples.Common
                         Redfin.Examples.Energy

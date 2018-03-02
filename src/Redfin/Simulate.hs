@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin.Verify
+-- Module      :  Redfin.Simulate
 -- Copyright   :  (c) Andrey Mokhov 2017
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
@@ -9,17 +9,17 @@
 -- Simulating REDFIN programs.
 --
 -----------------------------------------------------------------------------
-module Redfin.Verify (verify) where
+module Redfin.Simulate (simulate) where
 
 import Data.SBV
 
 import Redfin
 import Redfin.Decode
 
-verify :: Int -> State -> State
-verify steps state
+simulate :: Int -> State -> State
+simulate steps state
     | steps <= 0 = state
-    | otherwise  = ite halted state (verify (steps - 1) nextState)
+    | otherwise  = ite halted state (simulate (steps - 1) nextState)
   where
     halted    = readArray (flags state) (flagId Halt)
     nextState = snd $ redfin executeInstruction state

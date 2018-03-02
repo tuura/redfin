@@ -6,7 +6,7 @@ import Data.SBV
 import Redfin
 import Redfin.Assembly hiding (div, abs)
 import qualified Redfin.Assembly as Assembly
-import Redfin.Verify
+import Redfin.Simulate
 import Redfin.Language.Expression
 import Redfin.Examples.Common
 
@@ -30,8 +30,8 @@ import Redfin.Examples.Common
 --     y <- sInt64 "y"
 --     let mem = initialiseMemory [(0, x), (1, y)]
 --         steps = 100
---         finalStateHL = verify steps $ templateState energyEstimate mem
---         finalStateLL = verify steps $ templateState energyEstimateLowLevel mem
+--         finalStateHL = simulate steps $ boot energyEstimate mem
+--         finalStateLL = simulate steps $ boot energyEstimateLowLevel mem
 --     -- maximize "Max clock HL" $ clock finalStateHL
 --     -- maximize "Max clock LL" $ clock finalStateLL
 --     -- minimize "Min clock HL" $ clock finalStateHL
