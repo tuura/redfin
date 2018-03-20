@@ -2,8 +2,16 @@
 
 Specification and verification of the REDFIN sequencer
 
+## Building
+
+```
+apt install z3
+stack build
+```
+
 ## Microbenchmark
 
 ```
-stack build && stack exec benchmark
+mkdir ./smt_logs
+stack exec benchmark
 ```
