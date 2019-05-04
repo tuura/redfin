@@ -1,0 +1,67 @@
+
+The presented approach has been implemented and is planned to be released at the
+conference (this paper is currently under review).
+In this section we discuss our main design choices and achieved
+results, comparing them with the project's initial goals: (i) providing a unified
+specification, testing, and formal verification framework that is (ii) understandable
+and convenient to use by the REDFIN engineering team, and (iii)~allows the team
+to co-develop REDFIN software and hardware, by extending and modifying the
+default instruction semantics.
+
+\subsection{From hardware to untyped assembly to typed software}
+
+The proposed approach covers two levels of organisation of computer systems: the
+hardware microarchitecture (the state monad \hs{Redfin},~\S\ref{sec-transformer}),
+and the instruction set architecture (the assembly monad
+\hs{Script},~\S\ref{sec-verification}). These two levels are very different: the
+former allows hardware engineers to precisely capture the program semantics (and
+has proven useful in exposing underspecified behaviours), whereas the latter does
+not have a direct access to the microarchitectural level and is used to
+symbolically \emph{execute} the semantics, allowing software engineers to
+\emph{observe} the results and \emph{reason} about program correctness.
+
+By using Haskell as a metalanguage, we provided a purely syntactic implementation
+of a higher-level abstraction on top of the REDFIN assembly~---~a statically-typed
+language for arithmetic expressions. This demonstrates that the user
+of the verification framework has enough power to implement their own domain-specific
+extensions of the REDFIN assembly.
+
+Although our current implementation is written in Haskell, the presented ideas
+can be implemented in many other languages. We chose Haskell for its built-in
+support for polymorphic expressions, powerful \hs{do}-notation, and availability
+of a mature symbolic manipulation library (SBV). We also have a prototype
+implementation in Idris, a much younger language that features dependent
+types and hence allows us to verify more sophisticated properties at the type
+level~\cite{JFP:9060502}, however at the time of writing there is no equivalent
+of the SBV library in Idris, which is a significant practical disadvantage.
+Dependent Haskell~\cite{weirich2017dependent}, once implemented, will provide
+a convenient alternative.
+
+
+\subsection{Uniform development, testing and verification environment}
+
+The \hs{Script} monad was engineered to provide familiar assembly mnemonics and
+directives (e.g. data and instruction labels), which allows engineers to start
+using the framework for developing REDFIN programs even without prior experience
+of Haskell development, hopefully increasing the uptake of the framework.
+
+Thanks to symbolic simulation, we can uniformly handle both concrete and
+symbolic values, thus testing becomes just a special case of formal verification,
+allowing the engineers to reuse a common code base and infrastructure.
+Testing yields trivial SMT problems that can be solved in sub-second time for
+all programs of realistic sizes (typical REDFIN programs have hundreds of
+instructions). Formal verification is more expensive: in our experiments, we
+could handle programs comprising hundreds of instructions in 10-15 minutes, but
+one can easily construct small programs that will grind any SMT solver to a halt:
+for example, analysis of a single multiplication instruction \hs{mul} can take
+half an hour if it is required to factor 64"/bit numbers (try factoring
+\hs{4611686585363088391} with an SMT solver). In such cases, conservatively proving
+some of the correctness properties at the type level can significantly increase
+the productivity.
+
+Although proving properties about the hardware implementation is left for future
+work, the developed infrastructure provides a way to generate testsuites for the
+processing core from the formal semantics of REDFIN instructions. Furthermore,
+one can use the semantics to generate parts of the hardware
+implementation~\cite{reid2016cav} or synthesise efficient instruction
+subsets~\cite{mokhov2014synthesis}.

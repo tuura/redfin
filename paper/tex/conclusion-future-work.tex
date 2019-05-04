@@ -1,0 +1,46 @@
+This paper presents a formal verification approach developed to tackle a real
+engineering problem by combining known techniques from the formal verification
+and programming languages research communities. We demonstrated that these
+techniques can be applied to create a formal model of the spacecraft processing
+core REDFIN that is used to execute small control programs, and showed how to
+formally verify such programs. By releasing the state transformer semantics to
+public, we hope to provide other researchers with a realistic benchmark for
+their formal verification tools. We also invite them to contribute to the
+REDFIN toolchain itself. Below we list opportunities for future research.
+
+\subsection{Dependently-typed high-level DSL for REDFIN programs}
+
+On top of low-level REDFIN assembly we implemented a high-level arithmetic
+expression language with a simple type system to distinguish between variables
+using different number representation and measurement units. This very simple
+type system already helps to eliminate an important class of bugs
+with the help of Haskell's type checker. However, a dependently-typed host language,
+such as Agda, Coq, Dependent Haskell, or Idris, could provide us much more power.
+One example is compile-time elimination of out-of-memory access that can occur
+when branching to a non-existent program location or overflowing the stack.
+
+\subsection{System-level verification via strongly typed protocols}
+
+The REDFIN instruction set architecture has a number of bus-communication instructions
+to access the system bus. An interesting research problem is implementing a
+model of a complete space system in an advanced typed programming language by modelling
+each component separately and later integrating them using shared types specifying
+the communication protocol. We can then derive bus-communication code
+from the protocol specification, while sharing the same types on both sides will
+allow ensuring the correctness of communication. Similar work has been
+done in the context of web systems~\cite{Mestanogullari:2015:TWA:2808098.2808099}.
+
+\subsection{Hardware synthesis}
+
+The state transformer metalanguage presented in the paper makes the system
+state explicit and employs Haskell's advanced abstractions to make the
+state manipulation safe and structured. To convey the model's verification
+power down to the bare metal, we can implement a verified translation from the
+state-transformer metalanguage to a hardware description language to petrify
+the semantics and turn it into silicon.
+
+%TODO: Exploit the orthogonality of overflow and execution time.
+
+\section*{Acknowledgements}
+We would like to thank Neil Mitchell, Charles Morisset, Artem Pelenitsyn and
+Danil Sokolov for their helpful feedback on an earlier version of this paper.

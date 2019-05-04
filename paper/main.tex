@@ -1,0 +1,126 @@
+\documentclass[sigplan,10pt,review,anonymous]{acmart}
+\settopmatter{printfolios=true,printccs=false,printacmref=false}
+
+%% Some recommended packages.
+\usepackage{booktabs}   %% For formal tables:
+                        %% http://ctan.org/pkg/booktabs
+\usepackage{subcaption} %% For complex figures with subfigures/subcaptions
+                        %% http://ctan.org/pkg/subcaption
+
+
+\usepackage{bookmark}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+% \usepackage{lmodern}
+\usepackage{xspace}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+
+% Haskell code snippets and useful shortcuts
+\usepackage{minted}
+\setminted[haskell]{escapeinside=@@}
+\newcommand{\hs}{\mintinline{haskell}}
+\newcommand{\subhs}{\mintinline[fontsize=\small]{haskell}}
+\newcommand{\cmd}[1]{\textsf{\color[rgb]{0,0,0.5} #1}}
+\newcommand{\teq}{\smaller $\sim$}
+\newcommand{\ghci}{$\lambda$>}
+\newcommand{\defeq}{\stackrel{\text{def}}{=}}
+\newcommand{\dollar}{{\color[rgb]{0.40,0.40,0.40} \$}}
+\newcommand{\std}[1]{{\color[rgb]{0,0.3,0} #1}}
+\newcommand{\blk}[1]{{\color[rgb]{0,0,0} #1}}
+\newcommand{\blu}[1]{{\color[rgb]{0,0,1.0} #1}}
+
+% Questions and tasks
+\newcommand{\q}[2]{\textbf{\color{blue} Question #1:} #2}
+\newcommand{\todo}[2]{[\textbf{\color{red} #1:} #2]}
+
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
+\setcopyright{none}
+\bibliographystyle{ACM-Reference-Format}
+\citestyle{acmauthoryear}
+
+\begin{document}
+
+\title{$\!\!\!$Formal Verification of Spacecraft Control Programs$\!\!\!$ Using a Metalanguage for State Transformers}
+
+\author{Georgy Lukyanov}
+\affiliation{
+%   \department{School of Engineering}
+  \institution{Newcastle University}
+%   \city{Newcastle upon Tyne}
+  \country{United Kingdom}
+}
+\email{g.lukyanov2@ncl.ac.uk}
+\author{Andrey Mokhov}
+\affiliation{
+%   \department{School of Engineering}
+  \institution{Newcastle University}
+%   \city{Newcastle upon Tyne}
+  \country{United Kingdom}
+}
+\email{andrey.mokhov@ncl.ac.uk}
+
+\fancypagestyle{firstpagestyle}
+{
+   \fancyhf{}
+   \renewcommand{\headrulewidth}{0.2pt}
+   \fancyhead[C]{Under review, feedback is sought}
+}
+
+\begin{abstract}
+Verification of functional correctness of control programs is an essential task
+for the development of space electronics; it is difficult and time-consuming and
+typically outweighs design and programming tasks in terms of development hours.
+We present a verification approach designed to help spacecraft engineers reduce
+the effort required for formal verification of low-level control programs executed
+on custom hardware. The approach uses a metalanguage to describe the semantics
+of a program as a state transformer, which can be compiled to multiple targets
+for testing, formal verification, and code generation. The metalanguage itself
+is embedded in a strongly-typed host language (Haskell), providing a way to prove
+program properties at the type level, which can shorten the feedback loop and
+further increase the productivity of engineers.
+
+The verification approach is demonstrated on an industrial case study.
+We present REDFIN, a processing core used in space missions, and its formal
+semantics expressed using the proposed metalanguage, followed by a detailed
+example of verification of a simple control program.
+
+\keywords{formal verification, instruction set architecture, functional
+programming, domain-specific languages.}
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+\input{tex/intro.tex}
+
+
+\section{The REDFIN overview\label{sec-redfin}}
+\input{tex/redfin.tex}
+
+
+\section{State transformer\label{sec-transformer}}
+\input{tex/state.tex}
+
+
+\section{Formal verification\label{sec-verification}}
+\input{tex/redfin-formal.tex}
+
+
+\section{Discussion\label{sec-discussion}}
+\input{tex/discussion.tex}
+
+\section{Related Work\label{sec-related}}
+\input{tex/related-work.tex}
+
+\section{Conclusions and opportunities for future research\label{sec-future}}
+\input{tex/conclusion-future-work.tex}
+
+\bibliography{biblio}
+\end{document}
+\endinput

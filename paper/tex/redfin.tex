@@ -1,0 +1,82 @@
+
+For many spacecraft subsystems integrated circuits are required to perform control
+tasks or simple data processing. Typically, these integrated circuits are realised
+with FPGAs (Field Programmable Gate Arrays) due to their flexibility and lower
+costs compared to ASIC (Application-Specific Integrated Circuit) development \&
+fabrication. Since FPGAs can be used to implement arbitrary circuit functions
+including processor cores, it is possible to perform tasks both in hardware and
+in software. However, modern space-qualified FPGAs, which can withstand radiation
+in Earth orbit or deep space, have a limited amount of programmable resources.
+Therefore, it is often not feasible to implement a fully-fledged processor system
+in such an FPGA next to the mission-specific circuitry.
+
+The REDFIN instruction set was developed to address this issue and, more
+specifically, to meet the following goals: (i) simple instruction set to
+achieve a small hardware footprint, (ii) reduced complexity to support formal
+verification of programs, and (iii) deterministic behaviour for real-time
+applications.
+
+
+\subsection{REDFIN instruction set and microarchitecture}
+
+
+The instruction set architecture offers a configurable bit width for the
+data path, ranging from 8 to 64 bits. Instruction words have a fixed width of 16
+bits. The instruction set is based on a register-memory architecture, i.e.
+instructions can fetch their operands from registers as well as directly from the
+memory. This architecture favours a small register set, which minimises the hardware
+footprint of the processing core. Furthermore, the number of instructions in a
+program is typically smaller in comparison to traditional load/store architectures
+where all operands have to be transferred to registers before any operations can
+be performed. There are 47 instructions of the following types:
+
+
+\begin{itemize}
+\item{Load/store instructions for moving data words between general- and
+special-purpose registers and the memory, as well as load of immediate values.}
+\item{Arithmetic operations for integer and fixed-point numbers. In the latter
+case the number of fractional bits can be adjusted by a processor register.}
+\item{Bitwise logical and shift operations.}
+\item{Control flow instructions and associated comparison operations.}
+\item{Bus access instructions for read \& write operations on an AMBA AHB bus.}
+\end{itemize}
+
+
+The REDFIN processing core fetches instruction and data words from a small and fast
+on-chip SRAM. This only allows for execution of simple programs, however, it also
+eliminates the need to implement caches and thus removes a source of non-determinism of
+conventional processors. Since computing performance is not one of the main goals, the
+processor core is non-pipelined and therefore does not need to resolve data or control
+hazards or perform any form of speculative execution. These properties greatly simplify
+worst case execution time analysis.
+
+
+\subsection{Requirements for formal verification}
+
+
+Verification of \emph{functional correctness} of REDFIN programs, as defined by a
+requirement specification, clearly is an essential task for the development of space
+electronics. There are also important \emph{non-functional requirements}, such as
+worst case execution time and energy consumption, which rely on the implementation
+guarantees provided by the processing core. In order to reduce verification complexity,
+the REDFIN core only allows to execute a single subroutine whose execution is triggered
+by a higher-level controller in the system. The implementation also guarantees
+that concurrent bus accesses to the processor registers or memory do not affect
+the subroutine execution time. Furthermore, the processor does not implement
+interrupt handling. All these measures are taken in order to provide real-time
+subroutine execution guarantees and make the verification of non-functional
+properties feasible within the presented verification framework.
+
+Despite these restrictions the REDFIN core has already proven its effectiveness for
+simple control tasks and arithmetic computations as part of an antenna pointing unit
+for satellites. Nevertheless, verification can be difficult and time-consuming,
+even for small and simple programs. Verification activities, following engineering
+standards for space electronics, typically outweigh programming and design tasks by a
+factor of two in terms of development hours. Usually verification is performed via
+program execution on an instruction set simulator or a hardware model of the processor.
+Manually deriving test cases from the specification is cumbersome and error-prone
+and simulation times can become prohibitively long with a large number of tests that
+are often needed to reach the desired functional and code coverage. Formal verification
+methods can prove that a program satisfies certain properties for all possible
+test cases and are therefore immensely valuable for completing the verification
+with superior efficiency and quality.

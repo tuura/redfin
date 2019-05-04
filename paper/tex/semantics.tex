@@ -1,0 +1,174 @@
+\section{Instruction semantics}
+\label{sec:Semantics}
+
+In this section we define the meaning IAM instructions as a \emph{state
+transformer}, i.e. a function from the state space to itself.
+
+\begin{figure}[H]
+\centering
+$T = \{s_1 \rightarrow s_2 : s_1 \in S, s_2 \in S\}$
+\label{}
+\caption{A set of all machine state transformers.}
+\end{figure}
+
+Every instruction transforms the machine state in its own
+way, thus we may define the instructions semantics as a mapping from instructions
+to state transformers.
+
+\begin{figure}[H]
+\centering
+$ \textrm{execute}:I \rightarrow T$
+\label{}
+\caption{Instruction interpreter.}
+\end{figure}
+
+Here $I$ is a finite set represented in Haskell as
+the~\mintinline{haskell}{Instruction} data type.
+
+The state transition representation is the core concept of the developed
+Haskell framework. The Haskell's concept of~\emph{state monad} provides a way to
+emulate a mutable state behaviour in a purely functional programming language
+without explicit state threading. Consider the~\mintinline{haskell}{Machine} type being
+essentially a parametrised state-transition builder:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+newtype Machine a = Machine {runMachine :: State MachineState a}
+\end{minted}
+\caption{The IAM state transformer.}
+\end{figure}
+
+Every function with its return type market as~\mintinline{haskell}{Machine a} is a computation
+yielding a value of type~\mintinline{haskell}{a} and possibly altering the state of the machine.
+
+We define the semantics by implementing an interpreter
+function~\mintinline{haskell}{execute} that considers every data constructor of
+the~\mintinline{haskell}{Instruction} type and builds a computation in the
+~\mintinline{haskell}{Machine} monad --- a transformer of IAM state. This function
+is the heart of the simulation and formal verification framework.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+execute :: Instruction -> Machine ()
+execute (Halt                ) = executeHalt
+execute (Load     rX dmemaddr) = executeLoad     rX dmemaddr
+execute (LoadMI   rX dmemaddr) = executeLoadMI   rX dmemaddr
+execute (Set      rX simm    ) = executeSet      rX simm
+execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
+execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
+execute (Jump     simm       ) = executeJump     simm
+execute (JumpZero simm       ) = executeJumpZero simm
+\end{minted}
+\caption{An interpreter of IAM instruction set.}
+\label{execute}
+\end{figure}
+
+Let us now consider the semantics of some of instructions.
+
+The simplest state transformation is halting. If the interpreter sees the halt instruction, it
+sets the~\mintinline{haskell}{Halted} flag preventing the following execution.
+The~\mintinline{haskell}{writeFlag} does the actual machine state modification,
+advancing the clock by one tick (using the~\mintinline{haskell}{delay} function)
+and setting the flag.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+executeHalt :: Machine ()
+executeHalt = writeFlag Halted true
+
+writeFlag :: Flag -> SBool -> Machine ()
+writeFlag flag value = do
+    delay 1
+    modify $ \state ->
+        state { flags = writeArray (flags state)
+                                   (flagId flag)
+                                   value }
+\end{minted}
+\caption{Semantics of the~\mintinline{haskell}{Halt} instruction.}
+\label{haltSemantics}
+\end{figure}
+
+As a more involved example, let us define the semantics of the addition instruction.
+It operates with a register containing a first term and a memory location referring
+to the second one. The~\mintinline{haskell}{executeAdd} essentially retrieves the terms,
+adds them, places the result to the register, and sets the \mintinline{haskell}{Zero}
+flag if the result is zero.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+executeAdd :: Register -> MemoryAddress -> Machine ()
+executeAdd rX dmemaddr = do
+    x <- readRegister rX
+    y <- readMemory dmemaddr
+    let z = x + y
+    writeFlag Zero (z .== 0)
+    writeRegister rX z
+\end{minted}
+\caption{Semantics of the~\mintinline{haskell}{Add} instruction.}
+\label{addSemantics}
+\end{figure}
+
+Here,~\mintinline{haskell}{readRegister} and~\mintinline{haskell}{readMemory}
+are functions dedicated to query the states of register bank and memory.
+They are implemented in terms of SBV's array accessors:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+readRegister :: Register -> Machine Value
+readRegister register = do
+    currentState <- get
+    delay 1
+    pure $ readArray (registers currentState) register
+
+readMemory :: MemoryAddress -> Machine Value
+readMemory address = do
+    currentState <- get
+    delay 2
+    pure $ readArray (memory currentState) address
+\end{minted}
+\caption{Register bank and memory accessors.}
+\label{readRegMem}
+\end{figure}
+
+Both functions retrieve the current state of the machine, advance the clock by
+a predefined amount of cycles, and query the machine state for a desired value.
+
+An interesting note to make here is that in the implementation of these functions
+we are using Haskell as a~\emph{metalanguage}. We are operating the machine as
+a puppet master, using the external meta-notions of addition, comparison and let-binding.
+From the machine's point of view, we have an unlimited memory and act instantly,
+which gives us an unlimited modeling power. Later in this section we'll see how
+hard it is to achieve such a power using only IAM's internal entities.
+
+As the most sophisticated example we give here, consider the semantics of the
+\mintinline{haskell}{JumpZero} instruction. It uses SBV's symbolic conditional
+operation~\mintinline{haskell}{ite} to test if the~\mintinline{haskell}{Zero} flag
+is set, and, if so, modifies the machine's instruction counter by a provided offset.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+executeJumpZero :: Byte -> Machine ()
+executeJumpZero offset = do
+    zeroIsSet <- readFlag Zero
+    ic <- instructionCounter <$> get
+    let ic' = ite zeroIsSet (ic + fromByte offset) ic
+    modify $ \currentState ->
+        currentState {instructionCounter = ic'}
+\end{minted}
+\caption{Semantics of the~\mintinline{haskell}{JumpZero} instruction.}
+\label{jumpZeroSemantics}
+\end{figure}
+
+The semantics of the conditional jump instruction turns out to be one of the
+most sensible parts of a verification framework that relies on symbolical execution.
+It is vital to bear in mind the notion of~\emph{symbolic termination}. In our special
+case the situation starts to get difficult if the instruction counter value becomes
+purely symbolic, i.e. the program termination starts to depend on a symbolic value.
+There are ways to control symbolic termination, but current state of implementation of
+the verification framework is fragile and relies on the user to prevent the dangerous
+situations from happening. Currently, the verification framework uses an external
+counter of state transitions that guaranties termination.
+
+The implementations of these three instruction interpreters cover all the interesting
+features of the framework's implementation. Please consult to the framework
+repository~\cite{IAMGithub} for the full source code.
