@@ -53,8 +53,10 @@ be used both as a Haskell function and a high-level REDFIN expression:
 
 
 \begin{minted}{haskell}
-energyEstimate :: Integral a => a -> a -> a -> a -> a
-energyEstimate t1 t2 p1 p2 = abs (t1 - t2) * (p1 + p2) `div` 2
+energyEstimate :: Integral a
+               => a -> a -> a -> a -> a
+energyEstimate t1 t2 p1 p2 =
+    abs (t1 - t2) * (p1 + p2) `div` 2
 \end{minted}
 
 
@@ -104,11 +106,12 @@ memory of the processor using the helper function \hs{boot}.
 main :: IO ()
 main = do
     let dataMemory = [10, 5, 3, 5, 0, 100]
-        finalState = simulate 100 (boot energyEstimateHighLevel dataMemory)
+        finalState = simulate 100
+            (boot energyEstimateHighLevel dataMemory)
     printMemoryDump 0 5 (memory finalState)
-    putStrLn $ "R0: " ++ show (readArray (registers finalState) r0)
+    putStrLn $ "R0: " ++
+               show (readArray (registers finalState) r0)
 \end{minted}
-
 
 \noindent
 As the simulation result we get a \hs{finalState} value. We can inspect it by
@@ -161,7 +164,8 @@ theorem = do
     constrain $ p1 .>= 0 &&& p2 .>= 0
     -- Initialise the data memory with symbolic variables:
     let dataMemory = [t1, t2, p1, p2, 0, 100]
-        finalState = simulate 100 (boot energyEstimateHighLevel dataMemory)
+        finalState = simulate 100
+                     (boot energyEstimateHighLevel dataMemory)
         result     = readArray (registers finalState) r0
         halted     = readArray (flags finalState) (flagId Halt)
     -- Specify the requirements as a property for verification:
@@ -209,10 +213,14 @@ a conservative upper bound of 366 days per year.} and power constraints:
 
 
 \begin{minted}{haskell}
-constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 :: Year)
-constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 :: Year)
-constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts   ( 1 :: Watt)
-constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts   ( 1 :: Watt)
+constrain $ t1 .>= 0
+        &&& t1 .<= toMilliSeconds (30 :: Year)
+constrain $ t2 .>= 0
+        &&& t2 .<= toMilliSeconds (30 :: Year)
+constrain $ p1 .>= 0
+        &&& p1 .<= toMilliWatts   ( 1 :: Watt)
+constrain $ p2 .>= 0
+        &&& p2 .<= toMilliWatts   ( 1 :: Watt)
 \end{minted}
 
 
@@ -281,10 +289,14 @@ equivalence = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 :: Year)
-    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 :: Year)
-    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts   ( 1 :: Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts   ( 1 :: Watt)
+    constrain $ t1 .>= 0
+            &&& t1 .<= toMilliSeconds (30 :: Year)
+    constrain $ t2 .>= 0
+            &&& t2 .<= toMilliSeconds (30 :: Year)
+    constrain $ p1 .>= 0
+            &&& p1 .<= toMilliWatts   ( 1 :: Watt)
+    constrain $ p2 .>= 0
+            &&& p2 .<= toMilliWatts   ( 1 :: Watt)
     let dataMemory   = [t1, t2, p1, p2, 0, 100]
         llFinalState = simulate 100 (boot energyEstimateLowLevel  dataMemory)
         hlFinalState = simulate 100 (boot energyEstimateHighLevel dataMemory)
@@ -313,7 +325,8 @@ function:
 
 \begin{minted}{haskell}
 delay :: Clock -> Redfin ()
-delay cycles = Redfin $ \s -> ((), s { clock = clock s + cycles })
+delay cycles =
+    Redfin $ \s -> ((), s { clock = clock s + cycles })
 \end{minted}
 
 %TODO: Same can be done about power
@@ -336,12 +349,18 @@ timingAnalysis = optimize Independent $ do
     t2 <- exists "t2"
     p1 <- exists "p1"
     p2 <- exists "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 :: Year)
-    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 :: Year)
-    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts   ( 1 :: Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts   ( 1 :: Watt)
+    constrain $ t1 .>= 0
+            &&& t1 .<= toMilliSeconds (30 :: Year)
+    constrain $ t2 .>= 0
+            &&& t2 .<= toMilliSeconds (30 :: Year)
+    constrain $ p1 .>= 0
+            &&& p1 .<= toMilliWatts   ( 1 :: Watt)
+    constrain $ p2 .>= 0
+            &&& p2 .<= toMilliWatts   ( 1 :: Watt)
     let dataMemory = [t1, t2, p1, p2, 0, 100]
-        finalState = simulate 100 (boot energyEstimateLowLevel dataMemory)
+        finalState = simulate 100
+                     (boot energyEstimateLowLevel
+                           dataMemory)
     -- Specify independent optimisation goals:
     minimize "Best case"  (clock finalState)
     maximize "Worst case" (clock finalState)
@@ -355,7 +374,7 @@ achieved when the difference is negative ($t_1 - t_2 = -2$), as shown below.
 Z3 finishes in 0.5s.
 
 
-\begin{minipage}{0.45\textwidth}
+% \begin{minipage}{0.45\textwidth}
 \begin{minted}[frame=single]{text}
 Objective "Best case":
 Optimal model:
@@ -365,8 +384,8 @@ Optimal model:
   p2        =            0
   Best case =           12
 \end{minted}
-\end{minipage}
-\begin{minipage}{0.45\textwidth}
+% \end{minipage}
+% \begin{minipage}{0.45\textwidth}
 \begin{minted}[frame=single]{text}
 Objective "Worst case":
 Optimal model:
@@ -376,7 +395,7 @@ Optimal model:
   p2         =     0
   Worst case =    13
 \end{minted}
-\end{minipage}
+% \end{minipage}
 
 
 

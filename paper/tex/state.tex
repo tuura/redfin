@@ -10,10 +10,12 @@ The main idea of the presented approach is to use an explicit state"/transformer
 semantics of the REDFIN microarchitecture. The state space of the entire
 processing core is a Cartesian product of state spaces of every component:
 
-
-\[
-S=\{(r, m, ic, ir, p, f, c) : r \in R, m \in M, ic \in A, ir \in I, p \in P, f \in F, c \in C\},
-\]
+\begin{equation}
+\begin{split}
+S=\{(r, m, ic, ir, p, f, c) : r \in R, m \in M, ic \in A, ir \in I,\\
+p \in P, f \in F, c \in C\},
+\end{split}
+\end{equation}
 
 \noindent
 where $R$ is the set of register bank configurations;
@@ -40,39 +42,40 @@ available for Haskell. We briefly overview all \hs{State} components below.
 \begin{figure}[t]
 
 \begin{minted}{haskell}
-      data State = State { registers           :: RegisterBank
-                         , memory              :: Memory
-                         , instructionCounter  :: InstructionAddress
-                         , instructionRegister :: InstructionCode
-                         , program             :: Program
-                         , flags               :: Flags
-                         , clock               :: Clock }
+data State = State
+  { registers           :: RegisterBank
+  , memory              :: Memory
+  , instructionCounter  :: InstructionAddress
+  , instructionRegister :: InstructionCode
+  , program             :: Program
+  , flags               :: Flags
+  , clock               :: Clock }
 \end{minted}
 
 \begin{minted}{haskell}
-      type Register           = SymbolicValue Word2
-      type Value              = SymbolicValue Int64
-      type RegisterBank       = SymbolicArray Word2 Int64
+type Register           = SymbolicValue Word2
+type Value              = SymbolicValue Int64
+type RegisterBank       = SymbolicArray Word2 Int64
 \end{minted}
 
 \begin{minted}{haskell}
-      type MemoryAddress      = SymbolicValue Word8
-      type Memory             = SymbolicArray Word8 Int64
+type MemoryAddress      = SymbolicValue Word8
+type Memory             = SymbolicArray Word8 Int64
 \end{minted}
 
 \begin{minted}{haskell}
-      type InstructionAddress = SymbolicValue Word8
-      type InstructionCode    = SymbolicValue Word16
-      type Program            = SymbolicArray Word8 Word16
+type InstructionAddress = SymbolicValue Word8
+type InstructionCode    = SymbolicValue Word16
+type Program            = SymbolicArray Word8 Word16
 \end{minted}
 
 \begin{minted}{haskell}
-      data Flag               = Condition | Overflow | Halt | ...
-      type Flags              = SymbolicArray Flag Bool
+data Flag               = Condition | Overflow | ...
+type Flags              = SymbolicArray Flag Bool
 \end{minted}
 
 \begin{minted}{haskell}
-      type Clock              = SymbolicValue Word64
+type Clock              = SymbolicValue Word64
 \end{minted}
 
 \caption{Basic types for encoding REDFIN microarchitecture in Haskell.\label{fig-types}}
@@ -154,7 +157,8 @@ define it\footnote{\mbox{A generic version of this monad is available in standar
 
 
 \begin{minted}{haskell}
-data Redfin a = Redfin { transform :: State -> (a, State) }
+data Redfin a = Redfin
+  { transform :: State -> (a, State) }
 \end{minted}
 
 
@@ -166,9 +170,11 @@ below we express the state transformer $T_\textit{inc}$ using the \hs{Redfin} mo
 
 \begin{minted}{haskell}
 incrementInstructionCounter :: Redfin ()
-incrementInstructionCounter = Redfin $ \current -> ((), next)
+incrementInstructionCounter =
+  Redfin $ \current -> ((), next)
   where
-    next = current { instructionCounter = instructionCounter current + 1 }
+    next = current { instructionCounter =
+      instructionCounter current + 1 }
 \end{minted}
 
 
@@ -178,7 +184,7 @@ in the \hs{current} state and replaces it in the \hs{next} state with the
 incremented~value. The type \hs{Redfin ()} indicates that the computation does not
 produce any value as part of the state transformation. Such computations directly
 correspond to REDFIN programs and can be composed using the operator \hs{>>}.
-For example, \hs{fetchInstruction}~\hs{>>}~\hs{incrementInstructionCounter} is
+For example, \hs{fetchInstruction}\\\hs{>>}~\hs{incrementInstructionCounter} is
 the state transformer $T_\textit{inc} \circ T_\textit{fetch}$ assuming that
 \hs{fetchInstruction} corresponds to $T_\textit{fetch}$. We can also use
 Haskell's powerful \hs{do}-notation to compose computations:
@@ -186,15 +192,17 @@ Haskell's powerful \hs{do}-notation to compose computations:
 
 \begin{minted}{haskell}
 readInstructionRegister :: Redfin InstructionCode
-readInstructionRegister = Redfin $ \s -> (instructionRegister s, s)
+readInstructionRegister =
+  Redfin $ \s -> (instructionRegister s, s)
 \end{minted}
 
 \begin{minted}{haskell}
 executeInstruction :: Redfin ()
-executeInstruction = do fetchInstruction
-                        incrementInstructionCounter
-                        instructionCode <- readInstructionRegister
-                        decodeAndExecute instructionCode
+executeInstruction = do
+  fetchInstruction
+  incrementInstructionCounter
+  instructionCode <- readInstructionRegister
+  decodeAndExecute instructionCode
 \end{minted}
 
 \noindent
@@ -220,7 +228,8 @@ halt = writeFlag Halt true
 \begin{minted}{haskell}
 writeFlag :: Flag -> SymbolicValue Bool -> Redfin ()
 writeFlag flag value = Redfin $ \s -> ((), s')
-  where s' = s { flags = writeArray (flags s) (flagId flag) value }
+  where s' = s { flags = writeArray (flags s)
+                         (flagId flag) value }
 \end{minted}
 
 
@@ -242,8 +251,10 @@ abs :: Register -> Redfin ()
 abs rX = do
     state  <- readState
     result <- fmap Prelude.abs (readRegister rX)
-    let (_, overflowState) = transform (writeFlag Overflow true) state
-    writeState $ ite (result .< 0) overflowState state
+    let (_, overflowState) =
+      transform (writeFlag Overflow true) state
+    writeState $ ite (result .< 0)
+                     overflowState state
     writeRegister rX result
 \end{minted}
 
@@ -264,10 +275,11 @@ provided offset to the instruction counter if the flag is set.
 
 \begin{minted}{haskell}
 jmpi_ct :: SymbolicValue Int8 -> Redfin ()
-jmpi_ct offset = do ic <- readInstructionCounter
-                    condition <- readFlag Condition
-                    let ic' = ite condition (ic + offset) ic
-                    writeInstructionCounter ic'
+jmpi_ct offset = do
+  ic <- readInstructionCounter
+  condition <- readFlag Condition
+  let ic' = ite condition (ic + offset) ic
+  writeInstructionCounter ic'
 \end{minted}
 
 
@@ -275,7 +287,6 @@ jmpi_ct offset = do ic <- readInstructionCounter
 After working through the above examples, it is worth noting that we use our
 Haskell encoding of the state transformer as a~\emph{metalanguage}. We are
 operating the REDFIN core as a puppet master, using external
-\pagebreak
 meta-notions of addition,
 comparison and let"/binding. From the processor's
 point of view, we have infinite memory and act instantly, which gives us unlimited
@@ -283,23 +294,21 @@ modelling power. For example, we can run a simulation of the processor environme
 in an external tool and feed its result to \hs{writeRegister} as if it was
 obtained in a single clock cycle.
 
-
 \subsection{Symbolic simulation}
 
 Having defined the semantics of REDFIN instructions and programs, we can
 implement symbolic simulation of the processor:
 
-
 \begin{minted}{haskell}
 simulate :: Int -> State -> State
-simulate steps state
-    | steps <= 0 = state
-    | otherwise  = ite halted state (simulate (steps - 1) nextState)
+simulate steps s
+    | steps <= 0 = s
+    | otherwise  = ite halted
+                       s (simulate (steps - 1) nextS)
   where
-    halted    = readArray (flags state) (flagId Halt)
-    nextState = snd $ transform executeInstruction state
+    halted = readArray (flags s) (flagId Halt)
+    nextS  = snd $ transform executeInstruction s
 \end{minted}
-
 
 \noindent
 The function takes a number of simulation steps $N$ and an initial symbolic
