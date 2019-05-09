@@ -49,7 +49,15 @@ Fig.~\ref{fig-overview}, engineers can write high-level control
 programs for the REDFIN architecture directly in a small subset of Haskell. These
 high-level programs can be used for type-safe code generation and as executable
 specifications of intended functionality for the purposes of program synthesis and
-equivalence checking. % (\S\ref{sec-verification}).
+equivalence checking.
+
+In order to facilitate whole-program verification, we use a specific flavour of
+symbolic execution known as \emph{symbolic execution with merging}. In this approach,
+whenever a branch in the program is encountered, the symbolic execution engine performs
+merging of the two resulting disjunctive states, thus producing linear traces which could
+be translated into singular SMT-formulas representing whole programs. We refrain from a
+wider discussion of symbolic execution techniques here and refer the interested reader to
+the following survey paper~\ref{SurveySymExec-CSUR18}.
 
 We first introduce the REDFIN processing core (\S\ref{sec-redfin}), and then
 describe and discuss the presented approach
