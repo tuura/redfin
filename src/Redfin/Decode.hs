@@ -9,6 +9,7 @@
 -- REDFIN instruction set.
 --
 -----------------------------------------------------------------------------
+{-# LANGUAGE BinaryLiterals #-}
 module Redfin.Decode (
     executeInstruction,
 
@@ -19,6 +20,7 @@ module Redfin.Decode (
 import Data.Foldable
 import Data.SBV
 
+import System.IO.Unsafe (unsafePerformIO)
 import Redfin
 import qualified Redfin.Assembly  as A
 import qualified Redfin.Semantics as S
@@ -43,70 +45,52 @@ executeInstruction = do
     decodeAndExecute =<< readInstructionRegister
 
 decodeAndExecute :: InstructionCode -> Redfin ()
-decodeAndExecute code = Redfin $ \s -> ((), decode code s)
-
-decode :: InstructionCode -> State -> State
-decode code state = transformA
-  where
-    opcode       = decodeOpcode code
-    register     = decodeRegister code
-    address      = decodeMemoryAddress code
-    simm8        = decodeSImm8 code
-    uimm8        = decodeUImm8 code
-    simm10       = decodeSImm10 code
-    uimm10       = decodeUImm10 code
-    illegal      = writeFlag IllegalInstruction true
-    goA k (a, s) = ite (A.topOpcode a .== opcode) (snd $ redfin s state) k
-    transformA   = foldl' goA transformB
-        [(A.halt, S.halt)]
-    goB k (a, s) = ite (A.topOpcode (a 0 0) .== opcode) (snd $ redfin (s register address) state) k
-    transformB = foldl' goB transformC
-        [ (A.and  , S.and  )
-        , (A.or   , S.or   )
-        , (A.xor  , S.xor  )
-        , (A.add  , S.add  )
-        , (A.sub  , S.sub  )
-        , (A.mul  , S.mul  )
-        , (A.div  , S.div  )
-        , (A.fadd  , S.fadd  )
-        , (A.fsub  , S.fsub  )
-        , (A.fmul  , S.fmul  )
-        , (A.fdiv  , S.fdiv  )
-        , (A.ld   , S.ld   )
-        , (A.st   , S.st   )
-        , (A.ldmi , S.ldmi )
-        , (A.stmi , S.stmi )
-        , (A.cmpeq, S.cmpeq)
-        , (A.cmplt, S.cmplt)
-        , (A.cmpgt, S.cmpgt)
-        , (A.sl   , S.sl   )
-        , (A.sr   , S.sr   )
-        , (A.sra  , S.sra  ) ]
-    goC k (a, s) = ite (A.topOpcode (a 0 0) .== opcode) (snd $ redfin (s register simm8) state) k
-    transformC = foldl' goC transformE
-        [ (A.add_si, S.add_si)
-        , (A.sub_si, S.sub_si)
-        , (A.mul_si, S.mul_si)
-        , (A.div_si, S.div_si)
-        , (A.ld_si , S.ld_si ) ]
-    goE k (a, s) = ite (A.topOpcode (a 0 0) .== opcode) (snd $ redfin (s register uimm8) state) k
-    transformE = foldl' goE transformFS
-        [ (A.sl_i , S.sl_i )
-        , (A.sr_i , S.sr_i )
-        , (A.sra_i, S.sra_i)
-        , (A.ld_i , S.ld_i ) ]
-    goFS k (a, s) = ite (A.topOpcode (a 0) .== opcode) (snd $ redfin (s simm10) state) k
-    transformFS = foldl' goFS transformFU
-        [ (A.jmpi   , S.jmpi   )
-        , (A.jmpi_ct, S.jmpi_ct)
-        , (A.jmpi_cf, S.jmpi_cf) ]
-    goFU k (a, s) = ite (A.topOpcode (a 0) .== opcode) (snd $ redfin (s uimm10) state) k
-    transformFU = foldl' goFU transformG
-        [ (A.wait, S.wait) ]
-    goG k (a, s) = ite (A.topOpcode (a 0) .== opcode) (snd $ redfin (s register) state) k
-    transformG = foldl' goG (snd $ redfin illegal state)
-        [ (A.not, S.not)
-        , (A.abs, S.abs) ]
+decodeAndExecute code =
+    let opcode       = decodeOpcode code
+        register     = decodeRegister code
+        address      = decodeMemoryAddress code
+        simm8        = decodeSImm8 code
+        uimm8        = decodeUImm8 code
+        simm10       = decodeSImm10 code
+        uimm10       = decodeUImm10 code
+    in case opcode of
+         0b000001 -> S.and register address
+         0b000010 -> S.or     register address
+         0b000011 -> S.xor    register address
+         0b000100 -> S.add    register address
+         0b000101 -> S.sub    register address
+         0b000110 -> S.mul    register address
+         0b000111 -> S.div    register address
+         0b001000 -> S.ld     register address
+         0b001001 -> S.st     register address
+         0b001010 -> S.ldmi   register address
+         0b001011 -> S.stmi   register address
+         0b010001 -> S.cmpeq  register address
+         0b010010 -> S.cmplt  register address
+         0b010011 -> S.cmpgt  register address
+         0b011100 -> S.sl     register address
+         0b011101 -> S.sr     register address
+         0b011110 -> S.sra    register address
+         0b001100 -> S.fadd   register address
+         0b001101 -> S.fsub   register address
+         0b001110 -> S.fmul   register address
+         0b001111 -> S.fdiv   register address
+         0b100000 -> S.add_si   register simm8
+         0b100001 -> S.sub_si   register simm8
+         0b100010 -> S.mul_si   register simm8
+         0b100011 -> S.div_si   register simm8
+         0b100111 -> S.ld_si   register simm8
+         0b101100 -> S.sl_i    register uimm8
+         0b101101 -> S.sr_i    register uimm8
+         0b101110 -> S.sra_i    register uimm8
+         0b101111 -> S.ld_i    register uimm8
+         0b110000 -> S.jmpi   simm10
+         0b110001 -> S.jmpi_ct   simm10
+         0b110010 -> S.jmpi_cf   simm10
+         0b110011 -> S.wait   uimm10
+         0b111000 -> S.not   register
+         0b111001 -> S.abs   register
+         0b000000 -> S.halt
 
 pad :: Int -> [SBool]
 pad k = replicate k false
