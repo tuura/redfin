@@ -21,3 +21,4 @@ ghcid.txt
 
 .vscode/
 smt_logs/
+*.smt2
