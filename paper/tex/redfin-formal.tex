@@ -67,20 +67,20 @@ implementation of \hs{Script}, but one can think of it as a restricted version
 of the \hs{Redfin} state transformer, which we use to write \emph{programs that
 can manipulate the processor state only by executing instructions}, e.g. the
 only way to set the \hs{Overflow} flag is to execute an arithmetic instruction
-that actually has an overflow.
+that might cause an overflow.
 
 
 \begin{minted}[linenos]{haskell}
 energyEstimateHighLevel :: Script
 energyEstimateHighLevel = do
-    let t1    = read (IntegerVariable 0)
-        t2    = read (IntegerVariable 1)
-        p1    = read (IntegerVariable 2)
-        p2    = read (IntegerVariable 3)
-        temp  = Temporary 4
-        stack = Stack 5
-    compile r0 stack temp (energyEstimate t1 t2 p1 p2)
-    halt
+  let t1    = read (IntegerVariable 0)
+      t2    = read (IntegerVariable 1)
+      p1    = read (IntegerVariable 2)
+      p2    = read (IntegerVariable 3)
+      temp  = Temporary 4
+      stack = Stack 5
+  compile r0 stack temp (energyEstimate t1 t2 p1 p2)
+  halt
 \end{minted}
 \label{energyEstimateHighLevel}
 
@@ -105,12 +105,12 @@ memory of the processor using the helper function \hs{boot}.
 \begin{minted}{haskell}
 main :: IO ()
 main = do
-    let dataMemory = [10, 5, 3, 5, 0, 100]
-        finalState = simulate 100
-            (boot energyEstimateHighLevel dataMemory)
-    printMemoryDump 0 5 (memory finalState)
-    putStrLn $ "R0: " ++
-               show (readArray (registers finalState) r0)
+  let dataMemory = [10, 5, 3, 5, 0, 100]
+      finalState = simulate 100
+        (boot energyEstimateHighLevel dataMemory)
+  printMemoryDump 0 5 (memory finalState)
+  putStrLn $ "R0: " ++ show
+             (readArray (registers finalState) r0)
 \end{minted}
 
 \noindent
@@ -146,7 +146,8 @@ estimation subroutine must always return a non-negative integer value.
 \end{tcolorbox}
 
 To check that the program complies with the requirement, we translate the
-symbolic state transformer \hs{energyEstimateHighLevel} into an SMT formula,
+symbolic state transformer \mintinline[breakanywhere]{haskell}{energyEstimateHighLevel}
+into an SMT formula,
 and formulate the following theorem. Lines 13-14 extract the computed result and
 the value of the flag \hs{Halt} from the \hs{finalState}. Lines 15-16 require that
 the processor has halted, the result is equal to that computed by the high-level
@@ -155,22 +156,22 @@ Haskell expression \hs{energyEstimate} and is non"/negative.
 
 \begin{minted}[linenos, fontsize=\small]{haskell}
 theorem = do
-    -- Initialise symbolic variables:
-    t1 <- forall "t1"
-    t2 <- forall "t2"
-    p1 <- forall "p1"
-    p2 <- forall "p2"
-    -- Constrain p1 and p2 to be non-negative:
-    constrain $ p1 .>= 0 &&& p2 .>= 0
-    -- Initialise the data memory with symbolic variables:
-    let dataMemory = [t1, t2, p1, p2, 0, 100]
-        finalState = simulate 100
-                     (boot energyEstimateHighLevel dataMemory)
-        result     = readArray (registers finalState) r0
-        halted     = readArray (flags finalState) (flagId Halt)
-    -- Specify the requirements as a property for verification:
-    return $ halted &&& result .== energyEstimate t1 t2 p1 p2
-                    &&& result .>= 0
+  -- Initialise symbolic variables:
+  t1 <- forall "t1"
+  t2 <- forall "t2"
+  p1 <- forall "p1"
+  p2 <- forall "p2"
+  -- Constrain p1 and p2 to be non-negative:
+  constrain $ p1 .>= 0 &&& p2 .>= 0
+  -- Initialise the data memory with symbolic variables:
+  let dataMemory = [t1, t2, p1, p2, 0, 100]
+      finalState = simulate 100
+                   (boot energyEstimateHighLevel dataMemory)
+      result     = readArray (registers finalState) r0
+      halted     = readArray (flags finalState) (flagId Halt)
+  -- Specify the requirements as a property for verification:
+  return $ halted &&& result .== energyEstimate t1 t2 p1 p2
+                  &&& result .>= 0
 \end{minted}
 
 \noindent
@@ -397,5 +398,34 @@ Optimal model:
 \end{minted}
 % \end{minipage}
 
-
+\begin{table*}[t]
+\vspace{-1mm}
+\smaller
+\centering
+\begin{tabular}{l||l|l|l|c|c}
+\hline
+Benchmark           & Array size & Formula size LL & Formula size HL & Time LL    & Time HL    \\\hline
+Overflow example    & 6          & 122             & 109             & 0.503s     & 0.288s     \\
+                    & 9          & 286             & 260             & 1.482s     & 0.443s     \\
+                    & 12         & 492             & 453             & 3.604s     & 1.365s     \\
+                    & 15         & 740             & 688             & 49.969s    & 7.362s     \\
+                    & 18         & 1030            & 965             & 1m:16.757s & 1m:28.458s \\\hline\hline
+No overflow$^{(*)}$ & 6          & 135             & 122             & 0.171s     & 0.070s     \\
+                    & 9          & 318             & 292             & 0.467s     & 0.119s     \\
+                    & 12         & 549             & 510             & 0.739s     & 0.682s     \\
+                    & 15         & 828             & 776             & 1.839s     & 6.408s     \\
+                    & 18         & 1155            & 1090            & 9.944s     & 1m:12.880s \\\hline
+\hline
+Spec fulfilled$^{(**)}$ & 6          & 105             & 108            & 0.022s     & 0.040s     \\
+                        & 9          & 258             & 261            & 0.039s     & 0.097s     \\
+                        & 12         & 495             & 459            & 0.053s     & 0.647s     \\
+                        & 15         & 708             & 702            & 0.311s     & 7.322s     \\
+                        & 18         & 1005            & 990            & 2.633s     & 1m:11.896s \\\hline
+\end{tabular}
+\caption{Verification of low-level and high-level array summation procedures
+\label{tab-sum-benchmark}}
+\caption*{\\$^{(*)}$assuming the summands are in range $[1, 1000]$.
+$^{(**)}$procedure is functionally equivalent to the Haskell's \hs{sum} function.}
+\vspace{-8mm}
+\end{table*}
 

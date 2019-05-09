@@ -7,7 +7,7 @@
 \usepackage{subcaption} %% For complex figures with subfigures/subcaptions
                         %% http://ctan.org/pkg/subcaption
 
-
+\usepackage[english]{babel}
 \usepackage{bookmark}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -43,6 +43,14 @@
 \setcopyright{none}
 \bibliographystyle{ACM-Reference-Format}
 \citestyle{acmauthoryear}
+
+\makeatletter
+  \defineshorthand[english]{"/}{\babelhyphen{nobreak}}
+  \addto\extrasenglish{
+    \languageshorthands{english}
+    \useshorthands{"}
+  }
+\makeatother
 
 \begin{document}
 
@@ -108,11 +116,11 @@ programming, domain-specific languages.}
 \input{tex/intro.tex}
 
 
-\section{The REDFIN overview\label{sec-redfin}}
+\section{The REDFIN architecture overview\label{sec-redfin}}
 \input{tex/redfin.tex}
 
 
-\section{State transformer\label{sec-transformer}}
+\section{Modelling REDFIN in Haskell\label{sec-transformer}}
 \input{tex/state.tex}
 
 

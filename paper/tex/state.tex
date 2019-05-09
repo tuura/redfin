@@ -10,12 +10,12 @@ The main idea of the presented approach is to use an explicit state"/transformer
 semantics of the REDFIN microarchitecture. The state space of the entire
 processing core is a Cartesian product of state spaces of every component:
 
-\begin{equation}
+\begin{equation*}
 \begin{split}
-S=\{(r, m, ic, ir, p, f, c) : r \in R, m \in M, ic \in A, ir \in I,\\
+S=\{(r, m, ic, ir, p, f, c) : r \in R, m \in M, ic \in A, \\ir \in I,
 p \in P, f \in F, c \in C\},
 \end{split}
-\end{equation}
+\end{equation*}
 
 \noindent
 where $R$ is the set of register bank configurations;
@@ -35,9 +35,9 @@ the data width can be chosen depending on mission requirements, whereas we use f
 for example, the data type \hs{State} directly corresponds to the set of states~$S$.
 We defined \hs{SymbolicValue} and \hs{SymbolicArray} type constructors on top of
 Levent Erkok's symbolic verification library SBV~\cite{SBV}, which we use as the
-SMT translation and verification frontend. In principle, any other SMT frontend
+SMT translation and verification frontend. \todo{In principle, any other SMT frontend
 can be used, but to the best of our knowledge, SBV is the most mature SMT library
-available for Haskell. We briefly overview all \hs{State} components below.
+available for Haskell. \textbf{No, SBV here is crucial because it does all the actual symbolic execution}} We briefly overview all \hs{State} components below.
 
 \begin{figure}[t]
 
@@ -86,7 +86,7 @@ type Clock              = SymbolicValue Word64
 \subsubsection{Data values, registers and memory}
 64-bit data values (\hs{Int64}) are stored in registers and memory. There are~4
 registers (addressed by \hs{Word2}) and 256 memory locations (addressed by
-\hs{Word8}). Their content is represented by symbolic arrays that can be
+\hs{Word8}). The register bank and memory are represented by symbolic arrays that can be
 accessed via SBV's functions \hs{readArray} and \hs{writeArray}.
 
 
@@ -152,8 +152,8 @@ is inductively defined as follows:
 We represent state transformers in Haskell using the \emph{state monad}, a
 classic approach to emulating mutable state in a purely functional programming
 language~\cite{wadler1990comprehending}. We call our state monad~\hs{Redfin} and
-define it\footnote{\mbox{A generic version of this monad is available in standard module
-\hs{Control.Monad.State}.}} as follows:
+define it\footnote{A generic version of this monad is available in standard module
+\hs{Control.Monad.State}.} as follows:
 
 
 \begin{minted}{haskell}
@@ -163,7 +163,7 @@ data Redfin a = Redfin
 
 
 \noindent
-Every computation with the return type~\hs{Redfin} \hs{a} yields a value of type~\hs{a}
+Every computation with the return type~\hs{Redfin}~\hs{a} yields a value of type~\hs{a}
 and possibly alters the \hs{State} of the REDFIN microarchitecture. As an example,
 below we express the state transformer $T_\textit{inc}$ using the \hs{Redfin} monad.
 
@@ -172,16 +172,15 @@ below we express the state transformer $T_\textit{inc}$ using the \hs{Redfin} mo
 incrementInstructionCounter :: Redfin ()
 incrementInstructionCounter =
   Redfin $ \current -> ((), next)
-  where
-    next = current { instructionCounter =
-      instructionCounter current + 1 }
+  where next = current { instructionCounter =
+          instructionCounter current + 1 }
 \end{minted}
 
 
 \noindent
 In words, the state transformer looks up the value of the \hs{instructionCounter}
 in the \hs{current} state and replaces it in the \hs{next} state with the
-incremented~value. The type \hs{Redfin ()} indicates that the computation does not
+incremented~value. The type \hs{Redfin}~\hs{()} indicates that the computation does not
 produce any value as part of the state transformation. Such computations directly
 correspond to REDFIN programs and can be composed using the operator \hs{>>}.
 For example, \hs{fetchInstruction}\\\hs{>>}~\hs{incrementInstructionCounter} is
@@ -268,8 +267,8 @@ auxiliary functions \hs{readRegister}, \hs{writeRegister}, \hs{readState} and
 
 
 \subsubsection{Conditional branching}
-As an example of a control flow instruction, consider the conditional branching
-instruction \hs{jmpi_ct}, which tests the~\hs{Condition} flag, and adds the
+As an example of a control flow instruction, consider the conditional branch
+\hs{jmpi_ct}, which tests the~\hs{Condition} flag, and adds the
 provided offset to the instruction counter if the flag is set.
 
 
@@ -303,8 +302,8 @@ implement symbolic simulation of the processor:
 simulate :: Int -> State -> State
 simulate steps s
     | steps <= 0 = s
-    | otherwise  = ite halted
-                       s (simulate (steps - 1) nextS)
+    | otherwise  =
+        ite halted s (simulate (steps - 1) nextS)
   where
     halted = readArray (flags s) (flagId Halt)
     nextS  = snd $ transform executeInstruction s

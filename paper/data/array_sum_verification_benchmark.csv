@@ -1,19 +1,19 @@
-benchmark         , array_size, formula_size_ll, formula_size_hl, time_ll    , time_hl
+benchmark                , array_size, formula_size_ll, formula_size_hl, time_ll    , time_hl
 
-find_overflow     , 6         , 122            , 109            , 0.503s     , 0.288s
-find_overflow     , 9         , 286            , 260            , 1.482s     , 0.443s
-find_overflow     , 12        , 492            , 453            , 3.604s     , 1.365s
-find_overflow     , 15        , 740            , 688            , 49.969s    , 7.362s
-find_overflow     , 18        , 1030           , 965            , 1m:16.757s , 1m:28.458s
+sum_find_overflow        , 6         , 122            , 109            , 0.503s     , 0.288s
+sum_find_overflow        , 9         , 286            , 260            , 1.482s     , 0.443s
+sum_find_overflow        , 12        , 492            , 453            , 3.604s     , 1.365s
+sum_find_overflow        , 15        , 740            , 688            , 49.969s    , 7.362s
+sum_find_overflow        , 18        , 1030           , 965            , 1m:16.757s , 1m:28.458s
 
-prove_no_overflow , 6         , 135            , 122            , 0.171s     , 0.070s
-prove_no_overflow , 9         , 318            , 292            , 0.467s     , 0.119s
-prove_no_overflow , 12        , 549            , 510            , 0.739s     , 0.682s
-prove_no_overflow , 15        , 828            , 776            , 1.839s     , 6.408s
-prove_no_overflow , 18        , 1155           , 1090           , 9.944s     , 1m:12.880s
+sum_prove_no_overflow    , 6         , 135            , 122            , 0.171s     , 0.070s
+sum_prove_no_overflow    , 9         , 318            , 292            , 0.467s     , 0.119s
+sum_prove_no_overflow    , 12        , 549            , 510            , 0.739s     , 0.682s
+sum_prove_no_overflow    , 15        , 828            , 776            , 1.839s     , 6.408s
+sum_prove_no_overflow    , 18        , 1155           , 1090           , 9.944s     , 1m:12.880s
 
-equiv_hs_spec     , 6         , 105            , 108            , 0.022s     , 0.040s
-equiv_hs_spec     , 9         , 258            , 261            , 0.039s     , 0.097s
-equiv_hs_spec     , 12        , 495            , 459            , 0.053s     , 0.647s
-equiv_hs_spec     , 15        , 708            , 702            , 0.311s     , 7.322s
-equiv_hs_spec     , 18        , 1005           , 990            , 2.633s     , 1m:11.896s
+sum_equiv_hs_spec        , 6         , 105            , 108            , 0.022s     , 0.040s
+sum_equiv_hs_spec        , 9         , 258            , 261            , 0.039s     , 0.097s
+sum_equiv_hs_spec        , 12        , 495            , 459            , 0.053s     , 0.647s
+sum_equiv_hs_spec        , 15        , 708            , 702            , 0.311s     , 7.322s
+sum_equiv_hs_spec        , 18        , 1005           , 990            , 2.633s     , 1m:11.896s
