@@ -90,11 +90,11 @@ of Spacecraft Control Programs Using a Metalanguage for State Transformers}
 % }
 
 \begin{abstract}
-Verification of functional correctness of control programs is an essential task
-for the development of space electronics; it is difficult and time-consuming and
-typically outweighs design and programming tasks in terms of development hours.
-In this experience report, we present a verification approach designed to help
-spacecraft engineers to reduce the effort required for formal verification of
+Verification of correctness of control programs is an essential task
+in the development of space electronics; it is difficult and typically
+outweighs design and programming tasks in terms of development hours.
+This experience report presents a verification approach designed to help
+spacecraft engineers reduce the effort required for formal verification of
 low-level control programs executed on custom hardware.
 
 % The approach uses a
@@ -106,8 +106,8 @@ low-level control programs executed on custom hardware.
 
 The verification approach is demonstrated on an industrial case study.
 We present REDFIN, a processing core used in space missions, and its formal
-semantics expressed using the proposed metalanguage, followed by a detailed
-example of verification of a simple control program.
+semantics expressed using the proposed metalanguage for state transformers,
+followed by examples of verification of simple control programs.
 
 \keywords{formal verification, instruction set architecture, functional
 programming, domain-specific languages.}
@@ -118,21 +118,29 @@ programming, domain-specific languages.}
 \section{Introduction}
 \input{tex/intro.tex}
 
+\vspace{-1mm}
 \section{The REDFIN architecture overview\label{sec-redfin}}
+\vspace{-0.5mm}
 \input{tex/redfin.tex}
 
-\vspace{-1mm}
+\vspace{-1.5mm}
 \section{Modelling REDFIN in Haskell\label{sec-transformer}}
+\vspace{-1mm}
 \input{tex/state.tex}
 
 \vspace{-1mm}
 \section{Formal verification\label{sec-verification}}
+\vspace{-0.5mm}
 \input{tex/redfin-formal.tex}
 
+\vspace{-1mm}
 \section{Discussion\label{sec-discussion}}
+\vspace{-1mm}
 \input{tex/discussion.tex}
 
+\vspace{-2mm}
 \section{Related Work\label{sec-related}}
+\vspace{-1mm}
 \input{tex/related-work.tex}
 
 % \section{Conclusions and opportunities for future research\label{sec-future}}
