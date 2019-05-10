@@ -209,12 +209,12 @@ executeInstruction = do
 \end{minted}
 
 \noindent
-Here \hs{readInstructionRegister} extracts the instruction code from the current
+Here \hs{readInstructionRegister} reads the instruction code from the current
 state \emph{without modifying it}. This function is used in \hs{executeInstruction},
 which defines the semantics of the REDFIN execution cycle. We omit definitions of
 \hs{fetchInstruction} and \hs{decodeAndExecute} for brevity. The latter is a
-case analysis of 47 opcodes that returns the matching instruction. The semantics
-of several interesting instructions is discussed below.
+case analysis of 47 opcodes that returns the matching instruction. We discuss
+several instructions below.
 
 % \subsubsection{Halting the processor}
 The instruction~\hs{halt} sets the flag~\hs{Halt}, thereby stopping the
@@ -311,9 +311,8 @@ simulate :: Int -> State -> State
 simulate steps s | steps <= 0 = s
                  | otherwise  =
   ite halted s (simulate (steps - 1) next)
- where
-  halted = readArray (flags s) (flagId Halt)
-  next   = snd (transform executeInstruction s)
+ where halted = readArray (flags s) (flagId Halt)
+       next   = snd (transform executeInstruction s)
 \end{minted}
 
 \noindent

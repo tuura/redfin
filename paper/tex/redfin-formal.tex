@@ -16,7 +16,9 @@ steps of the workflow:
 \noindent
 Consider the following simple spacecraft control task.
 
+\vspace{-0.25mm}
 \begin{tcolorbox}
+\vspace{-1.5mm}
 Let $t_1$ and $t_2$ be two different time points (measured in ms),
 and $p_1$ and $p_2$ be two power values (measured in mW).
 Calculate the estimate of the total energy consumption during this period
@@ -25,7 +27,9 @@ using linear approximation, rounding down to the nearest integer:
 \[
 \textit{energyEstimate}(t_1, t_2, p_1, p_2) = \left\lfloor \frac{|t_1 - t_2| * (p_1 + p_2)}{2} \right\rfloor.
 \]
+\vspace{-2.5mm}
 \end{tcolorbox}
+\vspace{-0.25mm}
 
 \noindent
 This task looks too simple, but in fact it has a few pitfalls that,
@@ -37,27 +41,28 @@ unit conversion~\cite{NASA:1999:Mars}. Let us develop and verify
 a REDFIN program for this task.
 
 % \subsubsection{Writing the program}
-We can write programs in the untyped REDFIN assembly, or in a
-typed higher-level expression language. The former allows engineers to
-hand-craft highly optimised programs under tight resource
-constraints, but the latter brings type-safety and faster prototyping. We start
-with the high-level approach and define an expression that can be used both as a
-Haskell function and a high-level REDFIN expression:
+We can write programs in the untyped REDFIN assembly, or in a typed higher-level
+expression language. The former allows engineers to hand-craft highly optimised
+programs under tight resource constraints, while the latter brings type-safety
+and faster prototyping. We start with the high-level approach and define an
+expression that can be used both as a Haskell function and a high-level REDFIN
+expression:
 
 % Using Haskell's polymorphism, we can
 
-\begin{minted}[xleftmargin=10pt]{haskell}
+\vspace{-0.3mm}
+\begin{minted}[fontsize=\small]{haskell}
+energyEstimate :: Integral a => a -> a -> a -> a -> a
 energyEstimate t1 t2 p1 p2 =
     abs (t1 - t2) * (p1 + p2) `div` 2
 \end{minted}
-
-% energyEstimate :: Integral a
-%                => a -> a -> a -> a -> a
+\vspace{-0.5mm}
 
 \noindent
-We implement the energy estimation program by embedding the~\hs{energyEstimate}
-expression into a REDFIN~\hs{Script}. Due to the lack of space we omit the
-implementation of \hs{Script}, but one can think of it as a restricted version
+Thanks to polymorphism, we can treat \hs{energyEstimate} both as a numeric
+function, and as an abstract syntax tree that can be \emph{compiled} into a
+REDFIN assembly \hs{Script}. Due to the lack of space we omit the implementation
+of \hs{Script}, but one can think of it as a restricted version
 of the \hs{Redfin} state transformer, which we use to write \emph{programs that
 can manipulate the processor state only by executing instructions}, e.g. the
 only way to set the \hs{Overflow} flag is to execute an arithmetic instruction
@@ -93,8 +98,8 @@ We can run symbolic simulation for 100 steps, initialising the program and data
 memory of the processor using the function \hs{simulate} defined above and a
 helper function \hs{boot}.
 
+\vspace{-0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
-main :: IO ()
 main = do
   let dataMemory = [10, 5, 3, 5, 0, 100]
       finalState = simulate 100 $
@@ -103,6 +108,7 @@ main = do
   putStrLn $ "R0: " ++ show
              (readArray (registers finalState) r0)
 \end{minted}
+\vspace{-0.5mm}
 
 \noindent
 As the simulation result we get a \hs{finalState}. We inspect it by
@@ -110,16 +116,17 @@ printing relevant components: the values of the first six memory cells, and the
 result of the computation located in the register~\hs{r0}. Note that the stack
 pointer (cell 5) holds 100, as in the initial state, which means the stack is empty.
 
+\vspace{-0.5mm}
 \begin{minted}[frame=single, fontsize=\small]{text}
 Memory dump: [10, 5, 3, 5, 5, 100]
 R0: 20
 \end{minted}
+\vspace{-1mm}
 
-Simulating programs with concrete input values is useful for diagnostic and test.
-However, to formally verify their functional correctness, we need to inspect
-every valid combination of input values, which can be done by an SMT solver.
-This allows us to discover a problem in our energy estimation program.
-Consider the following correctness property.
+Simulating programs with specific inputs is useful for diagnostic and test, but
+SMT solvers allow us to verify the correctness for \emph{all valid input
+combinations}. To demonstrate this, let us discover a problem in our energy
+estimation program. Consider the following correctness property.
 
 % \subsubsection{Verifying the program}
 % The project lead engineer defined a set of functional requirements for the
@@ -128,13 +135,15 @@ Consider the following correctness property.
 % verification. One of the requirements is as follows.
 
 \begin{tcolorbox}
+\vspace{-1.5mm}
 Assuming that values $p_1$ and $p_2$ are non"/negative integers, the energy
 estimation subroutine must always return a non-negative integer value.
+\vspace{-1.5mm}
 \end{tcolorbox}
 
 To check that the program meets this requirement, we translate
 \hs{energyEstimateHighLevel} into an SMT formula,
-and formulate a corresponding theorem.
+and formulate the corresponding theorem:
 
 \begin{minted}[fontsize=\small]{haskell}
 theorem = do
@@ -158,8 +167,7 @@ We extract the computed result and the value of the flag \hs{Halt} from the
 \hs{finalState}, and then assert that the processor has halted, the result is
 non-negative, and is equal to that computed by the high-level Haskell expression
 \hs{energyEstimate}.
-
-The resulting SMT formula has 122 clauses and can be checked by Z3 in
+The resulting SMT formula can be checked by Z3 in
 3.0s\footnote{We use a laptop with 2.90GHz Intel Core i5-4300U processor, 8GB
 RAM (3MB cache), and the SMT solver Z3 version 4.5.1 (64-bit).}:
 
@@ -180,15 +188,17 @@ value on the provided inputs due to an \emph{integer overflow}. We therefore
 refine the property:
 
 \begin{tcolorbox}
+\vspace{-1mm}
 According to the spacecraft power system specification, $p_1$ and $p_2$ are
 non"/negative integers not exceeding 1W. The time is measured
 from the mission start, hence $t_1$ and $t_2$ are non-negative and do not exceed
 the time span of the mission, which is 30 years. Under these assumptions,
 the energy estimation subroutine must return a non-negative integer value.
+\vspace{-1mm}
 \end{tcolorbox}
 
 \noindent
-We modify time and power constraints accordingly:
+We need to modify time and power constraints accordingly:
 % \footnote{We are not absolutely
 % precise here. We do not distinguish between regular and leap years, and use
 % a conservative upper bound of 366 days per year.}
@@ -200,16 +210,8 @@ constrain $ p1 .<= toMilliWatts   ( 1 :: Watt)
 \end{minted}
 
 \noindent
-We then rerun Z3 (now on 134 SMT clauses) and get the desired outcome in 4.8s:
+Rerunning Z3 produces the desired \textsf{QED} outcome in 4.8s.
 
-% \vspace{-0.5mm}
-\begin{minted}[frame=single]{text}
-> proveWith z3 theorem
-Q.E.D.
-\end{minted}
-\vspace{-0.5mm}
-
-\noindent
 The refinement has rendered the integer overflow impossible;
 in particular, \hs{abs} can never be called with~$-2^{63}$
 within the mission parameters. Such guarantee fundamentally requires
@@ -245,19 +247,19 @@ energyEstimateLowLevel = do
 \vspace{-0.5mm}
 
 \noindent
-To support the development of hand-crafted code, we use Z3 to check the
-equivalence of REDFIN programs by verifying that they produce
+To support the development of hand-crafted code, we use Z3 to \emph{check the
+equivalence of REDFIN programs} by verifying that they produce
 the same output on all valid inputs. This allows an engineer to
 optimise a high-level prototype and have a guarantee that no bugs were
-introduced in the process. The corresponding \hs{equivalence} check takes 11.5s:
+introduced in the process. The corresponding \hs{equivalence} check takes 11.5s.
 % (on 52 SMT clauses)
 
-\vspace{-0.5mm}
-\begin{minted}[frame=single,fontsize=\small]{text}
-> proveWith z3 equivalence
-Q.E.D.
-\end{minted}
-\vspace{-0.5mm}
+% \vspace{-0.5mm}
+% \begin{minted}[frame=single,fontsize=\small]{text}
+% > proveWith z3 equivalence
+% Q.E.D.
+% \end{minted}
+% \vspace{-0.5mm}
 
 % Below we check the \hs{equivalence} of this low-level program with
 % \hs{energyEstimateHighLevel} introduced earlier.
@@ -303,12 +305,14 @@ added~1~extra clock cycle in case of a negative argument.
 % \end{minted}
 %TODO: Same can be done about power
 
+\vspace{-0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 timingAnalysis = optimize Independent $ do
   ... -- Initialise and run symbolic simulation
   minimize "Best case"  (clock finalState)
   maximize "Worst case" (clock finalState)
 \end{minted}
+\vspace{-0.5mm}
 
 \noindent
 The total delay of the program depends only on the sign of $t_1 - t_2$, thus
@@ -340,35 +344,3 @@ Optimal model:
   Worst case =    13
 \end{minted}
 \end{minipage}
-
-\begin{table*}[t]
-\vspace{-1mm}
-\smaller
-\centering
-\begin{tabular}{l||l|l|l|c|c}
-\hline
-Benchmark           & Array size & Formula size LL & Formula size HL & Time LL    & Time HL    \\\hline
-Overflow example    & 6          & 122             & 109             & 0.503s     & 0.288s     \\
-                    & 9          & 286             & 260             & 1.482s     & 0.443s     \\
-                    & 12         & 492             & 453             & 3.604s     & 1.365s     \\
-                    & 15         & 740             & 688             & 49.969s    & 7.362s     \\
-                    & 18         & 1030            & 965             & 1m:16.757s & 1m:28.458s \\\hline\hline
-No overflow$^{(*)}$ & 6          & 135             & 122             & 0.171s     & 0.070s     \\
-                    & 9          & 318             & 292             & 0.467s     & 0.119s     \\
-                    & 12         & 549             & 510             & 0.739s     & 0.682s     \\
-                    & 15         & 828             & 776             & 1.839s     & 6.408s     \\
-                    & 18         & 1155            & 1090            & 9.944s     & 1m:12.880s \\\hline
-\hline
-Spec fulfilled$^{(**)}$ & 6          & 105             & 108            & 0.022s     & 0.040s     \\
-                        & 9          & 258             & 261            & 0.039s     & 0.097s     \\
-                        & 12         & 495             & 459            & 0.053s     & 0.647s     \\
-                        & 15         & 708             & 702            & 0.311s     & 7.322s     \\
-                        & 18         & 1005            & 990            & 2.633s     & 1m:11.896s \\\hline
-\end{tabular}
-\caption{Verification of low-level and high-level array summation procedures
-\label{tab-sum-benchmark}}
-\caption*{\\$^{(*)}$assuming the summands are in range $[1, 1000]$.
-$^{(**)}$procedure is functionally equivalent to the Haskell's \hs{sum} function.}
-\vspace{-8mm}
-\end{table*}
-
