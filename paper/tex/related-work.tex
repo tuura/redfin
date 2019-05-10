@@ -26,15 +26,15 @@ much smaller scale of the REDFIN core and focus on verifying whole programs.
 
 Our metalanguage is embedded in Haskell and does not have a rigorous
 formalisation, i.e. we cannot prove the correctness of the REDFIN semantics
-itself (this is a common concern, e.g. see~\cite{reid2017oopsla}). Moreover, our
+itself, which is a common concern, e.g. see~\cite{reid2017oopsla}. Moreover, our
 verification workflow mainly relies on \emph{automated} theorem proving, rather
 than on \emph{interactive} one. This is motivated by the cost of precise proof
 assistant formalisations in terms of human resources: automated techniques are
-more CPU-intensive, but cause less ``human-scaling issues''~(Reid at
-al.~\cite{reid2016cav}). Our goal was to create a framework that could be seamlessly
+more CPU-intensive, but cause less ``human-scaling issues''~\cite{reid2016cav}.
+Our goal was to create a framework that could be seamlessly
 integrated into an existing spacecraft engineering workflow, therefore it needed
 to have as much proof automation as possible. The automation is achieved by means
-of \emph{symbolic program execution}. Currie at al.~\cite{Currie2006} applied
+of \emph{symbolic program execution}. \citet{Currie2006} applied
 symbolic execution with uninterpreted functions to prove equivalence of low-level
 assembly programs. The framework we present allows not only proving the
 equivalence of low-level programs, but also their compliance with higher-level
