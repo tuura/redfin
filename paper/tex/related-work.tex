@@ -1,31 +1,31 @@
-
 There is a vast body of literature available on the topic of formal verification,
 including verification of hardware processing cores and low-level software programs.
 Our work builds in a substantial way on a few known ideas that we will review in
 this section. We thank the formal verification and programming languages
-communities and hope that the formal semantics of the REDFIN processing core will
-provide a new interesting benchmark for future studies.
+communities and hope that the formal semantics of the REDFIN processing core
+will provide a new interesting benchmark for future studies.
 
 We model the REDFIN microarchitecture using a~\emph{monadic state transformer
-metalanguage}. There are several examples of prior work exploiting this idea.
-Fox and Myreen~\cite{fox2010trustworthy} formalise the Arm v7 instruction
+metalanguage} -- an idea with a long history.
+\citet{fox2010trustworthy} formalise the Arm v7 instruction
 set architecture in HOL4 and give a careful account to bit-accurate proofs of
-the instruction decoder correctness. Later, Kennedy et al.~\cite{kennedy2013coq}
+the instruction decoder correctness. Later, \citet{kennedy2013coq}
 formalised a subset of the x86 architecture in Coq, using monads for instruction
-execution semantics and monadic \hs{do}-notation for assembly language embedding.
-Both these models are formalised in proof assistants, thus are powered by full
-dependent types, which allow the usage of mechanised program correctness proofs.
-Degenbaev~\cite{degenbaev2012formal} formally specifies the \emph{complete} x86
+execution semantics and \textsf{do}-notation for assembly language embedding.
+% Both these models are formalised in proof assistants, thus are powered by full
+% dependent types, which allow the usage of mechanised program correctness proofs.
+\citet{degenbaev2012formal} formally specified the \emph{complete} x86
 instruction set -- a truly monumental effort! -- using a custom domain-specific
 language that can be translated to a formal proof system. Arm's Architecture
 Specification Language (ASL) has been developed for the same purpose to formalise the
 Arm v8 instruction set~\cite{reid2016cav}. The SAIL language~\cite{SAIL-lang} has
-been designed to be a generic language for ISA specification and was used to
+been designed as a generic language for ISA specification and was used to
 specify the semantics of ARMv8-a, RISC-v, and CHERI-MIPS.
-Our specification approach is similar to these three works, but we operate on a much smaller scale of the REDFIN core and put a specific emphasis on verifying programs.
+Our specification approach is similar to these three works, but we operate on a
+much smaller scale of the REDFIN core and focus on verifying whole programs.
 
-Our monadic metalanguage is embedded in Haskell and does not have a rigorous
-formalisation, i.e. we cannot prove correctness of the REDFIN semantics
+Our metalanguage is embedded in Haskell and does not have a rigorous
+formalisation, i.e. we cannot prove the correctness of the REDFIN semantics
 itself (this is a common concern, e.g. see~\cite{reid2017oopsla}). Moreover, our
 verification workflow mainly relies on \emph{automated} theorem proving, rather
 than on \emph{interactive} one. This is motivated by the cost of precise proof
@@ -40,16 +40,16 @@ assembly programs. The framework we present allows not only proving the
 equivalence of low-level programs, but also their compliance with higher-level
 specifications written in a subset of Haskell.
 
-A lot of research work has been done on the design of \emph{typed assembly
-languages}, e.g. see~\cite{Haas:2017:BWU:3140587.3062363}\cite{Morrisett:1999:SFT:319301.319345}.
-The low-level REDFIN assembly is untyped, but the syntactic language of
-arithmetic expressions that we implemented on top of it does have a simple type
-system. In principle, the REDFIN assembly itself may benefit from a richer type
-system, especially one enforcing correct operation with relevant mission-specific
-units of measurement~\cite{Kennedy:1997:RPU:263699.263761}.
+% A lot of research work has been done on the design of \emph{typed assembly
+% languages}, e.g. see~\cite{Haas:2017:BWU:3140587.3062363}\cite{Morrisett:1999:SFT:319301.319345}.
+% The low-level REDFIN assembly is untyped, but the syntactic language of
+% arithmetic expressions that we implemented on top of it does have a simple type
+% system. In principle, the REDFIN assembly itself may benefit from a richer type
+% system, especially one enforcing correct operation with relevant mission-specific
+% units of measurement~\cite{Kennedy:1997:RPU:263699.263761}.
 
-Finally, we would like to acknowledge several related projects, blogposts and talks
+Finally, we would like to acknowledge the projects and talks
 that provided an initial inspiration for this work: the `Monads to Machine
-Code' compiler by Diehl~\cite{diehl-monads-to-machines}, RISC-V semantics in Haskell
-by MIT~\cite{riscv-semantics}, Wall's assembly monad~\cite{asm-monad}, and
-SMT-based program analysis by Jelvis~\cite{haskell-z3}.
+Code' compiler by \citet{diehl-monads-to-machines}, RISC"/V semantics
+by~\citet{riscv-semantics}, the assembly monad by~\citet{asm-monad}, and
+SMT-based program analysis by \citet{haskell-z3}.
