@@ -1,14 +1,14 @@
 
-The presented approach has been implemented and is planned to be released at the
-conference (this paper is currently under review).
-In this section we discuss our main design choices and achieved
-results, comparing them with the project's initial goals: (i) providing a unified
-specification, testing, and formal verification framework that is (ii) understandable
+% The presented approach has been implemented and is planned to be released at the
+% conference (this paper is currently under review).
+In this section we discuss our design choices and achieved
+results, comparing them with the project's initial goals: (i)~providing a unified
+specification, testing, and formal verification framework that is (ii)~understandable
 and convenient to use by the REDFIN engineering team, and (iii)~allows the team
 to co-develop REDFIN software and hardware, by extending and modifying the
 default instruction semantics.
 
-\subsection{From hardware to untyped assembly to typed software}
+% \subsection{From hardware to untyped assembly to typed software}
 
 The proposed approach covers two levels of organisation of computer systems: the
 hardware microarchitecture (the state monad \hs{Redfin},~\S\ref{sec-transformer}),
@@ -23,22 +23,21 @@ symbolically \emph{execute} the semantics, allowing software engineers to
 By using Haskell as a metalanguage, we provided a purely syntactic implementation
 of a higher-level abstraction on top of the REDFIN assembly~---~a statically-typed
 language for arithmetic expressions. This demonstrates that the user
-of the verification framework has enough power to implement their own domain-specific
+of the verification framework can implement their own domain-specific
 extensions of the REDFIN assembly.
 
 Although our current implementation is written in Haskell, the presented ideas
-can be implemented in many other languages. We chose Haskell for its built-in
+can be implemented in other languages. We chose Haskell for its built-in
 support for polymorphic expressions, powerful \hs{do}-notation, and availability
 of a mature symbolic manipulation library (SBV). We also have a prototype
 implementation in Idris, a much younger language that features dependent
-types and hence allows us to verify more sophisticated properties at the type
+types and allows us to verify more sophisticated properties at the type
 level~\cite{JFP:9060502}, however at the time of writing there is no equivalent
 of the SBV library in Idris, which is a significant practical disadvantage.
 Dependent Haskell~\cite{weirich2017dependent}, once implemented, will provide
 a convenient alternative.
 
-
-\subsection{Uniform development, testing and verification environment}
+% \subsection{Uniform development, testing and verification environment}
 
 The \hs{Script} monad was engineered to provide familiar assembly mnemonics and
 directives (e.g. data and instruction labels), which allows engineers to start

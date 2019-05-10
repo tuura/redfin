@@ -1,21 +1,26 @@
+% For many spacecraft subsystems integrated circuits are required to perform control
+% tasks or simple data processing. Typically, these integrated circuits are realised
+% with FPGAs (Field Programmable Gate Arrays) due to their flexibility and lower
+% costs compared to ASIC (Application-Specific Integrated Circuit) development \&
+% fabrication. Since FPGAs can be used to implement arbitrary circuit functions
+% including processor cores, it is possible to perform tasks both in hardware and
+% in software. However, modern space-qualified FPGAs, which can withstand radiation
+% in Earth orbit or deep space, have a limited amount of programmable resources.
+% Therefore, it is often not feasible to implement a fully-fledged processor system
+% in such an FPGA next to the mission-specific circuitry.
 
-For many spacecraft subsystems integrated circuits are required to perform control
-tasks or simple data processing. Typically, these integrated circuits are realised
+Many spacecraft subsystems rely on integrated circuits to perform control tasks
+or simple data processing. Typically, these integrated circuits are realised
 with FPGAs (Field Programmable Gate Arrays) due to their flexibility and lower
-costs compared to ASIC (Application-Specific Integrated Circuit) development \&
-fabrication. Since FPGAs can be used to implement arbitrary circuit functions
-including processor cores, it is possible to perform tasks both in hardware and
-in software. However, modern space-qualified FPGAs, which can withstand radiation
-in Earth orbit or deep space, have a limited amount of programmable resources.
-Therefore, it is often not feasible to implement a fully-fledged processor system
-in such an FPGA next to the mission-specific circuitry.
-
+costs. Modern space-qualified FPGAs, which can withstand radiation in Earth
+orbit or deep space, have a limited amount of programmable resources. Therefore,
+it is often not feasible to implement a fully-fledged processor system in such
+an FPGA next to the mission-specific circuitry.
 The REDFIN instruction set was developed to address this issue and, more
 specifically, to meet the following goals: (i) simple instruction set to
 achieve a small hardware footprint, (ii) reduced complexity to support formal
 verification of programs, and (iii) deterministic behaviour for real-time
 applications.
-
 
 \subsection{REDFIN instruction set and microarchitecture}
 
@@ -30,17 +35,16 @@ program is typically smaller in comparison to traditional load/store architectur
 where all operands have to be transferred to registers before any operations can
 be performed. There are 47 instructions of the following types:
 
-
 \begin{itemize}
-\item{Load/store instructions for moving data words between general- and
-special-purpose registers and the memory, as well as load of immediate values.}
-\item{Arithmetic operations for integer and fixed-point numbers. In the latter
-case the number of fractional bits can be adjusted by a processor register.}
+\item{Load/store instructions for moving data between registers and memory, and
+loading of immediate values.}
+\item{Integer and fixed-point arithmetic operations.}
+% In the latter
+% case the number of fractional bits can be adjusted by a processor register.
 \item{Bitwise logical and shift operations.}
-\item{Control flow instructions and associated comparison operations.}
+\item{Control flow instructions and comparison operations.}
 \item{Bus access instructions for read \& write operations on an AMBA AHB bus.}
 \end{itemize}
-
 
 The REDFIN processing core fetches instruction and data words from a small and fast
 on-chip SRAM. This only allows for execution of simple programs, however, it also

@@ -54,7 +54,8 @@
 
 \begin{document}
 
-\title{$\!\!\!$Formal Verification of Spacecraft Control Programs$\!\!\!$ Using a Metalanguage for State Transformers}
+\title[Formal Verification of Spacecraft Control Programs]{Formal Verification
+of Spacecraft Control Programs Using a Metalanguage for State Transformers}
 
 \author{Andrey Mokhov}
 \affiliation{
@@ -81,25 +82,27 @@
 }
 \email{jakob.lechner@gmx.net}
 
-\fancypagestyle{firstpagestyle}
-{
-   \fancyhf{}
-   \renewcommand{\headrulewidth}{0.2pt}
-   \fancyhead[C]{Under review, feedback is sought}
-}
+% \fancypagestyle{firstpagestyle}
+% {
+%    \fancyhf{}
+%    \renewcommand{\headrulewidth}{0.2pt}
+%    \fancyhead[C]{Under review, feedback is sought}
+% }
 
 \begin{abstract}
 Verification of functional correctness of control programs is an essential task
 for the development of space electronics; it is difficult and time-consuming and
 typically outweighs design and programming tasks in terms of development hours.
-We present a verification approach designed to help spacecraft engineers reduce
-the effort required for formal verification of low-level control programs executed
-on custom hardware. The approach uses a metalanguage to describe the semantics
-of a program as a state transformer, which can be compiled to multiple targets
-for testing, formal verification, and code generation. The metalanguage itself
-is embedded in a strongly-typed host language (Haskell), providing a way to prove
-program properties at the type level, which can shorten the feedback loop and
-further increase the productivity of engineers.
+In this experience report, we present a verification approach designed to help
+spacecraft engineers to reduce the effort required for formal verification of
+low-level control programs executed on custom hardware.
+
+% The approach uses a
+% metalanguage to describe the semantics of a program as a state transformer,
+% which can be compiled to multiple targets for testing, formal verification, and
+% code generation. The metalanguage is embedded in Haskell, providing a way to
+% prove some properties at the type level, which can shorten the feedback loop
+% and further increase the productivity of engineers.
 
 The verification approach is demonstrated on an industrial case study.
 We present REDFIN, a processing core used in space missions, and its formal
@@ -115,18 +118,16 @@ programming, domain-specific languages.}
 \section{Introduction}
 \input{tex/intro.tex}
 
-
 \section{The REDFIN architecture overview\label{sec-redfin}}
 \input{tex/redfin.tex}
 
-
+\vspace{-1mm}
 \section{Modelling REDFIN in Haskell\label{sec-transformer}}
 \input{tex/state.tex}
 
-
+\vspace{-1mm}
 \section{Formal verification\label{sec-verification}}
 \input{tex/redfin-formal.tex}
-
 
 \section{Discussion\label{sec-discussion}}
 \input{tex/discussion.tex}
@@ -134,9 +135,9 @@ programming, domain-specific languages.}
 \section{Related Work\label{sec-related}}
 \input{tex/related-work.tex}
 
-\section{Conclusions and opportunities for future research\label{sec-future}}
-\input{tex/conclusion-future-work.tex}
+% \section{Conclusions and opportunities for future research\label{sec-future}}
+% \input{tex/conclusion-future-work.tex}
 
 \bibliography{biblio}
 \end{document}
-\endinput
+% \endinput
