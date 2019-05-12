@@ -1,10 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Redfin.Examples.Energy (
-        energyEstimate, energyEstimateHighLevel, energyEstimateLowLevel,
-        equivalence, highLevelFaultyExample, highLevelCorrect,
-        simulateHighLevel
-    ) where
+module Redfin.Examples.Energy where
 
 import Prelude hiding (read)
 import Text.Pretty.Simple (pPrint)
@@ -78,24 +74,9 @@ equivalence = do
         resultHL = readArray (registers finalStateHL) 0
     pure $ resultLL .== resultHL
 
-highLevelFaultyExample :: Symbolic SBool
-highLevelFaultyExample = do
-    t1 <- forall "t1"
-    t2 <- forall "t2"
-    p1 <- forall "p1"
-    p2 <- forall "p2"
-    constrain $ p1 .>= 0
-    constrain $ p2 .>= 0
-    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-        steps = 100
-        finalState = simulate steps $ boot energyEstimateHighLevel mem
-        result = readArray (registers finalState) 0
-        overflow = readArray (flags finalState) (flagId Overflow)
-    pure $   bnot overflow
-         &&& result .>= 0
 
-highLevelCorrect :: Symbolic SBool
-highLevelCorrect = do
+equivHaskell :: Script -> Symbolic SBool
+equivHaskell src = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
@@ -106,12 +87,61 @@ highLevelCorrect = do
     constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         steps = 100
-        finalState = simulate steps $ boot energyEstimateHighLevel mem
+        finalState = simulate steps $ boot src mem
+        result = readArray (registers finalState) 0
+    pure $ result .== energyEstimate t1 t2 p1 p2
+
+faultyExample :: Script -> Symbolic SBool
+faultyExample src = do
+    t1 <- forall "t1"
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2"
+    constrain $ p1 .>= 0
+    constrain $ p2 .>= 0
+    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+        steps = 100
+        finalState = simulate steps $ boot src mem
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   bnot overflow
          &&& result .>= 0
 
+correct :: Script -> Symbolic SBool
+correct src = do
+    t1 <- forall "t1"
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2"
+    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
+    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+        steps = 100
+        finalState = simulate steps $ boot src mem
+        result = readArray (registers finalState) 0
+        overflow = readArray (flags finalState) (flagId Overflow)
+    pure $   bnot overflow
+         &&& result .>= 0
+
+lowLevelCorrect :: Symbolic SBool
+lowLevelCorrect = do
+    t1 <- forall "t1"
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2"
+    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
+    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+        steps = 100
+        finalState = simulate steps $ boot energyEstimateLowLevel mem
+        result = readArray (registers finalState) 0
+        overflow = readArray (flags finalState) (flagId Overflow)
+    pure $   bnot overflow
+         &&& result .>= 0
 
 highLevelCorrectFP :: Symbolic SBool
 highLevelCorrectFP = do

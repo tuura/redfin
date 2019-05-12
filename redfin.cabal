@@ -65,6 +65,7 @@ executable benchmark
   main-is:              Main.hs
   hs-source-dirs:       benchmark
   build-depends:        base,
+                        time,
                         directory,
                         sbv,
                         redfin

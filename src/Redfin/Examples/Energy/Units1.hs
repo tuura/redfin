@@ -12,22 +12,7 @@
 -- Currently this module defined dimensions and units of measurement relevant
 -- to 'Redfin.Examples.Energy'.
 -----------------------------------------------------------------------------
-module Redfin.Examples.Energy.Units (
-        -- * Re-export units modules
-        -- * This module exports unit definitions according to the SI system of units
-        --   (Meters, Grams, Seconds etc.)
-        module Data.Units.SI,
-        -- * Defines prefixes from the SI standard (milli, micro etc.)
-        module Data.Units.SI.Prefixes,
-        -- * This module exports definitions for the SI system and related combinators
-        --   such as (%) and (#).
-        module Data.Metrology.Poly,
-
-        -- * These units, dimensions and ad-hoc coercions are used in 'Redfin.Examples.Energy' example.
-        --   TODO: re-export facilities for user-defined units and dimensions.
-        Year (..), Time, Power, Energy,
-        toMilliSeconds, toMilliWatts, absU
-    ) where
+module Redfin.Examples.Energy.Units1 where
 
 import Data.Metrology.Poly
 import Data.Metrology.SI ()  -- DefaultLCSU instances
@@ -39,6 +24,8 @@ import Data.Metrology.Unsafe
 import Redfin.Data.Fixed
 import Redfin
 
+import Data.SBV hiding ((%), (#))
+
 absU :: Num n => Qu d1 l n -> Qu d1 l n
 absU (Qu a) = Qu (abs a)
 
@@ -47,14 +34,29 @@ instance Unit Year where
     type BaseUnit Year = Second
     conversionRatio _ = 60 * 60 * 24 * 366
 
-type Time = SI.Time 'DefaultLCSU Fixed
+type Time = SI.Time 'DefaultLCSU SDouble
 
-type Power = SI.Power 'DefaultLCSU Fixed
+type Power = SI.Power 'DefaultLCSU SDouble
 
 type Energy = Time %* Power
 
+es :: Time -> Time -> Power -> Power -> Energy
+es t1 t2 p1 p2 = ((absU (t1 |-| t2)) |*| (p1 |+| p2)) |/| 2
+
+-- x :: Energy
+-- x = (es (10 % Second) (0 % Second) (10 % Watt) (30 % Watt))
+
+forgetUnits :: Energy -> SDouble
+forgetUnits x = x # (milli Second :* milli Watt)
+
 toMilliSeconds :: Time -> Value
-toMilliSeconds t = unsafeFixedToValue (t # milli Second)
+toMilliSeconds t = fromSDouble sRoundTowardZero (t # milli Second)
 
 toMilliWatts :: Power -> Value
-toMilliWatts p = unsafeFixedToValue (p # milli Watt)
+toMilliWatts p = fromSDouble sRoundTowardZero (p # milli Watt)
+
+-- toMilliSeconds :: Time -> SDouble
+-- toMilliSeconds t = (t # milli Second)
+
+-- toMilliWatts :: Power -> SDouble
+-- toMilliWatts p = (p # milli Watt)

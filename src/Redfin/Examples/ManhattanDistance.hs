@@ -28,22 +28,22 @@ distanceHighLevel = do
     compile r0 stack temp (distance xs ys)
     halt
 
-faultyExample :: Symbolic SBool
-faultyExample = do
+faultyExample :: Script -> Symbolic SBool
+faultyExample src = do
     let xsNames = map (("x" ++) . show) [1..pointsCount]
         ysNames = map (("y" ++) . show) [1..pointsCount]
     xs <- symbolics xsNames
     ys <- symbolics ysNames
     let mem = initialiseMemory (zip [2..] (xs ++ ys) ++ [(1, 100)])
         steps = 1000
-        finalState = simulate steps $ boot distanceHighLevel mem
+        finalState = simulate steps $ boot src mem
         result = readArray (registers finalState) 0
         halted = readArray (flags finalState) (flagId Halt)
         overflow = readArray (flags finalState) (flagId Overflow)
-    pure $ halted &&& bnot overflow
+    pure $ bnot overflow
 
-noOverflow :: Symbolic SBool
-noOverflow = do
+noOverflow :: Script -> Symbolic SBool
+noOverflow src = do
     let xsNames = map (("x" ++) . show) [1..pointsCount]
         ysNames = map (("y" ++) . show) [1..pointsCount]
     xs <- symbolics xsNames
@@ -51,12 +51,13 @@ noOverflow = do
     mapM_ (\x -> constrain (x .>= 0 &&& x .<= 1000)) (xs ++ ys)
     let mem = initialiseMemory (zip [2..] (xs ++ ys) ++ [(1, 100)])
         steps = 1000
-        finalState = simulate steps $ boot distanceHighLevel mem
+        finalState = simulate steps $ boot src mem
         result = readArray (registers finalState) 0
-    pure $ result .== distance xs ys
+        overflow = readArray (flags finalState) (flagId Overflow)
+    pure $ bnot overflow
 
-equivHaskell :: Symbolic SBool
-equivHaskell = do
+equivHaskell :: Script -> Symbolic SBool
+equivHaskell src = do
     let xsNames = map (("x" ++) . show) [1..pointsCount]
         ysNames = map (("y" ++) . show) [1..pointsCount]
     xs <- symbolics xsNames
@@ -64,6 +65,6 @@ equivHaskell = do
     mapM_ (\x -> constrain (x .>= 0 &&& x .<= 1000)) (xs ++ ys)
     let mem = initialiseMemory (zip [2..] (xs ++ ys) ++ [(1, 100)])
         steps = 1000
-        finalState = simulate steps $ boot distanceHighLevel mem
+        finalState = simulate steps $ boot src mem
         result = readArray (registers finalState) 0
     pure $ result .== distance xs ys

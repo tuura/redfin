@@ -316,7 +316,7 @@ jmpi_cf simm = do
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()
-wait _uimm = error "wait is not yet implemented" -- delay (fromUImm10 uimm)
+wait _uimm = pure () -- error "wait is not yet implemented" -- delay (fromUImm10 uimm)
 
 -- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
 -- more meaningful implementation, for example, by raising the @Halt@ flag.

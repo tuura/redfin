@@ -16,16 +16,10 @@ module Redfin.Decode (
     decodeOpcode, decodeRegister, decodeMemoryAddress, decodeSImm8,
     decodeSImm10, decodeUImm8, decodeUImm10
     ) where
-
-import Data.Foldable
 import Data.SBV
 
-import System.IO.Unsafe (unsafePerformIO)
 import Redfin
-import qualified Redfin.Assembly  as A
 import qualified Redfin.Semantics as S
-
--- TODO: Add documentation.
 
 -- | Execute the instruction pointed to by the instruction counter, performing
 -- the following steps in sequence:
@@ -91,6 +85,7 @@ decodeAndExecute code =
          0b111000 -> S.not   register
          0b111001 -> S.abs   register
          0b000000 -> S.halt
+         _        -> writeFlag IllegalInstruction true
 
 pad :: Int -> [SBool]
 pad k = replicate k false
