@@ -56,9 +56,8 @@ sumArrayLowLevel = do
     add_si r1 1
     st r1 pointer
 
-    label "loop"
     -- compare the pointer variable to the constant 2 (stored in the cell 255)
-    cmplt r1 const_two
+    "loop" @@ cmplt r1 const_two
     -- if pointer == 2 then terminate
     goto_ct "end"
     -- jmpi_ct 7
@@ -71,9 +70,7 @@ sumArrayLowLevel = do
     st r1 pointer
 
     goto "loop"
-    label "end"
-    -- end loop
-    ld r0 sum
+    "end" @@ ld r0 sum
     halt
 
 type Constrain = Value -> Symbolic ()

@@ -14,7 +14,7 @@
 -- module Redfin.Assembly where
 module Redfin.Assembly (
     -- * Assembly scripts and assembler
-    Script, machineCode, assemble, topOpcode, label, goto, goto_ct, goto_cf,
+    Script, machineCode, assemble, topOpcode, label, (@@), goto, goto_ct, goto_cf,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -92,6 +92,11 @@ assemble src = foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
   where
     a0     = mkSFunArray (const 0)
     prg    = machineCode src
+
+(@@) :: String -> Script -> Script
+name @@ src = do
+    label name
+    src
 
 label :: String -> Script
 label name = do
