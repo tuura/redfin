@@ -26,11 +26,12 @@ prettyPrintScript = pPrint . showScript
 
 -- | Pretty-print a 'Script' to 'Text'.
 showScript :: Script -> T.Text
-showScript script =
+showScript src =
     T.replace " :: SInt8"  "" .
+    T.replace " :: SInt16"  "" .
     T.replace " :: SWord8" "" .
     T.pack . unlines $
-    map showInstructionCode $ reverse $ snd $ runWriter script []
+    map showInstructionCode $ machineCode src
 
 showInstructionCode :: InstructionCode -> String
 showInstructionCode code =

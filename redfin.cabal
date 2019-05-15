@@ -35,6 +35,7 @@ library
                         Redfin.Data.Fixed
     build-depends:      base       >= 4.8 && < 5,
                         containers >= 0.5.7,
+                        mtl,
                         extra,
                         sbv,
                         pretty-simple,

@@ -56,11 +56,12 @@ sumArrayLowLevel = do
     add_si r1 1
     st r1 pointer
 
-    loop <- label
+    label "loop"
     -- compare the pointer variable to the constant 2 (stored in the cell 255)
     cmplt r1 const_two
     -- if pointer == 2 then terminate
-    jmpi_ct 7
+    goto_ct "end"
+    -- jmpi_ct 7
 
     ldmi r2 pointer
     add r2 sum
@@ -69,7 +70,8 @@ sumArrayLowLevel = do
     sub_si r1 1
     st r1 pointer
 
-    goto loop
+    goto "loop"
+    label "end"
     -- end loop
     ld r0 sum
     halt

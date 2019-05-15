@@ -11,9 +11,10 @@
 -- An embedded REDFIN assembly language.
 --
 -----------------------------------------------------------------------------
+-- module Redfin.Assembly where
 module Redfin.Assembly (
     -- * Assembly scripts and assembler
-    Script, assemble, topOpcode, asm, label, goto, scriptLength,
+    Script, machineCode, assemble, topOpcode, label, goto, goto_ct, goto_cf,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -40,11 +41,24 @@ module Redfin.Assembly (
     ) where
 
 import Control.Monad
+import Data.Maybe (fromJust)
+import Control.Monad.State
+import qualified Data.Map.Strict as Map
 import Data.Bits hiding (bit, xor)
 import Data.SBV hiding (label)
 import Prelude hiding (and, div, not, or, abs)
 
-import Redfin
+import Redfin hiding (State, instructionCounter, program)
+
+type Labels = Map.Map String InstructionAddress
+
+data AssemblerState =
+    MkAssemblerState { program            :: [(InstructionAddress, InstructionCode)]
+                     , labels             :: Labels
+                     , instructionCounter :: InstructionAddress
+                     }
+
+type Script = State AssemblerState ()
 
 type P = [InstructionCode]
 
@@ -57,41 +71,73 @@ data Writer a = Writer
 instance Show a => Show (Writer a) where
     show s = show $ reverse $ snd $ runWriter s []
 
-type Script = Writer ()
+collectLabels :: Script -> Labels
+collectLabels src =
+    labels $ snd $ runState src (MkAssemblerState [] Map.empty 0)
+
+-- assemble :: Script -> Program
+-- assemble src =
+--     map (second encode) prg
+--   where
+--     prg = reverse $ program $ snd $ runState src (MkAssemblerState [] labels 0)
+--     labels = collectLabels src
+
+machineCode :: Script -> [InstructionCode]
+machineCode src =
+    let labels = collectLabels src
+    in map snd $ reverse $ program $ snd $ runState src (MkAssemblerState [] labels 0)
 
 assemble :: Script -> Program
-assemble s = foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
+assemble src = foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
   where
-    a0  = mkSFunArray (const 0)
-    prg = reverse $ snd $ runWriter s []
+    a0     = mkSFunArray (const 0)
+    prg    = machineCode src
 
-instance Applicative Writer where
-    pure  = return
-    (<*>) = ap
+label :: String -> Script
+label name = do
+    s <- get
+    let ic = instructionCounter s
+    put $ s {labels = Map.insert name ic $ labels s}
 
-instance Monad Writer where
-    return a         = Writer (\p -> (a, p)) (error "Empty script")
-    Writer w t >>= f = Writer (\p -> let (a, p') = w p in runWriter (f a) p') t
+goto :: String -> Script
+goto name = do
+    s <- get
+    here <- instructionCounter <$> get
+    case Map.lookup name (labels s) of
+         Nothing -> jmpi 0
+         Just there -> do
+             let offset = there - here - 1
+             jmpi (fromIntegral . fromJust . unliteral $ offset)
 
-newtype Label = Label Int
+goto_ct :: String -> Script
+goto_ct name = do
+    s <- get
+    here <- instructionCounter <$> get
+    case Map.lookup name (labels s) of
+         Nothing -> jmpi 0
+         Just there -> do
+             let offset = there - here - 1
+             jmpi_ct (fromIntegral . fromJust . unliteral $ offset)
 
-label :: Writer Label
-label = Writer (\p -> (Label (length p), p)) (error "Label script")
-
-goto :: Label -> Script
-goto (Label there) = do
-    Label here <- label
-    let offset = fromIntegral (there - here - 1)
-    jmpi offset -- TODO: Add error handling if offset is too large
-
-scriptLength :: Num a => Script -> a
-scriptLength = fromIntegral . length . snd . flip runWriter []
+goto_cf :: String -> Script
+goto_cf name = do
+    s <- get
+    here <- instructionCounter <$> get
+    case Map.lookup name (labels s) of
+         Nothing -> jmpi 0
+         Just there -> do
+             let offset = there - here - 1
+             jmpi_cf (fromIntegral . fromJust . unliteral $ offset)
 
 write :: Opcode -> InstructionCode -> Script
-write o c = Writer (\p -> ((), (opcode o .|. c):p)) o
+write o c = do
+    s <- get
+    let ic = instructionCounter s
+    put $ s { program = (ic, (opcode o .|. c)):program s
+            , instructionCounter = ic + 1}
 
-asm :: InstructionCode -> Script
-asm code = write (decodeOpcode code) code
+-- asm :: InstructionCode -> Script
+-- asm code = write (decodeOpcode code) code
 
 -- Instructions
 and   rX dmemaddr = write 0b000001 (register rX .|. address dmemaddr)
