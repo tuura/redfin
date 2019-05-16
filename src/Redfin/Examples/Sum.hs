@@ -83,7 +83,11 @@ sumArrayTheorem src arraySize constr statement = do
     summands <- symbolics names
     -- constrain xs to be in [0, 1000]
     sequence_ (zipWith ($) (repeat constr) summands)
-    let mem = initialiseMemory (zip [2..] summands ++ [(1, 100)] ++ [(0, literal . fromIntegral $ arraySize)])
+    let mem = initialiseMemory
+                (zip [2..] summands ++
+                 [(1, 100)] ++
+                 [(0, literal . fromIntegral $ arraySize)]
+                 [(255, 2)])
         steps = 1000
         finalState = simulate steps $ boot src mem
         result = readArray (registers finalState) 0
