@@ -31,6 +31,7 @@ library
                         Redfin.Examples.Energy.OverflowHunt
                         Redfin.Examples.ManhattanDistance
                         Redfin.Examples.Sum
+                        Redfin.Examples.MotorControl
                         Redfin.Semantics
                         Redfin.Data.Fixed
     build-depends:      base       >= 4.8 && < 5,
@@ -53,6 +54,12 @@ library
     other-extensions:   BinaryLiterals
                         DeriveFunctor
     GHC-options:        -O2 -Wall -fwarn-tabs
+                        -fno-warn-unused-local-binds
+                        -fno-warn-unused-matches
+                        -fno-warn-type-defaults
+                        -fno-warn-unused-imports
+                        -fno-warn-name-shadowing
+                        -fno-warn-unused-top-binds
 
 test-suite main
   type:             exitcode-stdio-1.0
