@@ -1,5 +1,6 @@
 module Redfin.Examples.CyclicShift where
 
+import Control.Monad.IO.Class (liftIO)
 import Prelude hiding (read)
 import Text.Pretty.Simple (pPrint)
 import Data.SBV hiding (label)
@@ -33,18 +34,17 @@ arrayShiftLeft = do
     ld_i r1 1
     st r1 253
     -- while (j <= size of array)
-    loop <- label
-    cmplt r1 255 -- Is j greater than the size of array?
-    jmpi_cf 11 -- Jump to the instruction right after the loop body
+    "loop" @@ cmplt r1 255 -- Is j greater than the size of array?
+    goto_cf "end" -- jmpi_cf 11 -- Jump to the instruction right after the loop body
     -- loop body
     swap (252, 253) 254 r2 -- this is 6 instructions
     add_si r0 1
     st r0 252
     add_si r1 1
     st r1 253
-    goto loop
+    goto "loop"
     -- end loop
-    halt
+    "end" @@ halt
 
 arrayShiftLeftMemory :: [Value] -> Memory
 arrayShiftLeftMemory xs = initialiseMemory $
@@ -59,12 +59,18 @@ shiftedLeft :: Int -> Symbolic SBool
 shiftedLeft n = do
     -- n <- forall "n" -- pure 10
     -- constrain $ n .> 0 &&& n .< 100
+    -- let xs = map (literal . snd) $ zip [0..n-1] [1,2..]
     xs <- symbolics (map ('x':) $ map show [0..n-1])
     let initialState = boot arrayShiftLeft (arrayShiftLeftMemory xs)
-        finalState = simulate 1000 $ initialState
+        finalState = simulate 100000 $ initialState
     let arr  = dumpMemory 0 (fromIntegral n - 1) . memory $ initialState
         arr' = dumpMemory 0 (fromIntegral n - 1) . memory $ finalState
-    pure $ (map snd arr') `isLeftCyclicShiftOf` (map snd arr)
+        overflow = readArray (flags finalState) (flagId Overflow)
+        halted   = readArray (flags finalState) (flagId Halt)
+    -- liftIO $ mapM_ print arr
+    -- liftIO $ mapM_ print arr'
+    pure $ halted &&&
+           (map snd arr') `isLeftCyclicShiftOf` (map snd arr)
 
 isLeftCyclicShiftOf :: [Value] -> [Value] -> SBool
 isLeftCyclicShiftOf [] [] = true

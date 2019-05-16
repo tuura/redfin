@@ -17,10 +17,11 @@ initialiseMemory :: [(MemoryAddress, Value)] -> Memory
 initialiseMemory =
     foldr (\(a, v) m -> writeArray m a v) (mkSFunArray $ const 0)
 
-dumpMemory :: Word8 -> Word8 -> Memory -> [(Int, Value)]
-dumpMemory from to m = filter ((/=0) . snd) $ zip [0 ..] $ map
-    (readArray m)
-    [literal from .. literal to]
+dumpMemory :: Word8 -> Word8 -> Memory -> [(Word8, Value)]
+dumpMemory from to m =
+    -- filter ((/= 0) . snd) $
+    zip [0 ..] $ map
+    (readArray m) [literal from .. literal to]
 
 boot :: Script -> Memory -> State
 boot src mem = State
