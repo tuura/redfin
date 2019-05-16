@@ -75,35 +75,33 @@ collectLabels :: Script -> Labels
 collectLabels src =
     labels $ snd $ runState src (MkAssemblerState [] Map.empty 0)
 
--- assemble :: Script -> Program
--- assemble src =
---     map (second encode) prg
---   where
---     prg = reverse $ program $ snd $ runState src (MkAssemblerState [] labels 0)
---     labels = collectLabels src
-
+-- | Translate an assembly script into binary machine codes
 machineCode :: Script -> [InstructionCode]
 machineCode src =
     let labels = collectLabels src
     in map snd $ reverse $ program $ snd $ runState src (MkAssemblerState [] labels 0)
 
+-- | Assemble an assembly script into a program
 assemble :: Script -> Program
 assemble src = foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
   where
     a0     = mkSFunArray (const 0)
     prg    = machineCode src
 
-(@@) :: String -> Script -> Script
-name @@ src = do
-    label name
-    src
-
+-- | Declare a label in a program
 label :: String -> Script
 label name = do
     s <- get
     let ic = instructionCounter s
     put $ s {labels = Map.insert name ic $ labels s}
 
+-- | Infix analog of label --- declare a label in the program
+(@@) :: String -> Script -> Script
+name @@ src = do
+    label name
+    src
+
+-- | Unconditionally goto a label
 goto :: String -> Script
 goto name = do
     s <- get
@@ -114,6 +112,7 @@ goto name = do
              let offset = there - here - 1
              jmpi (fromIntegral . fromJust . unliteral $ offset)
 
+-- | Goto a label if the 'Condition' flag is set
 goto_ct :: String -> Script
 goto_ct name = do
     s <- get
@@ -124,6 +123,7 @@ goto_ct name = do
              let offset = there - here - 1
              jmpi_ct (fromIntegral . fromJust . unliteral $ offset)
 
+-- | Goto a label if the 'Condition' flag is not set
 goto_cf :: String -> Script
 goto_cf name = do
     s <- get
@@ -140,9 +140,6 @@ write o c = do
     let ic = instructionCounter s
     put $ s { program = (ic, (opcode o .|. c)):program s
             , instructionCounter = ic + 1}
-
--- asm :: InstructionCode -> Script
--- asm code = write (decodeOpcode code) code
 
 -- Instructions
 and   rX dmemaddr = write 0b000001 (register rX .|. address dmemaddr)

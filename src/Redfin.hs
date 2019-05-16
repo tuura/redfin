@@ -109,7 +109,7 @@ data Flag = Condition
           -- e.g. after the 'Redfin.Semantics.jmpi' instruction.
           | Overflow
           -- ^ Set when arithmetic overflow occurs.
-          deriving (Enum, Eq, Ord, Show)
+          deriving (Bounded, Enum, Eq, Ord, Show)
 
 flagId :: Flag -> SWord8
 flagId = literal . fromIntegral . fromEnum

@@ -1,5 +1,6 @@
 module Redfin.Examples.Common where
 
+import Data.Maybe (fromJust)
 import Data.SBV
 import Redfin
 import Redfin.Assembly
@@ -17,11 +18,25 @@ initialiseMemory :: [(MemoryAddress, Value)] -> Memory
 initialiseMemory =
     foldr (\(a, v) m -> writeArray m a v) (mkSFunArray $ const 0)
 
-dumpMemory :: Word8 -> Word8 -> Memory -> [(Word8, Value)]
-dumpMemory from to m =
-    -- filter ((/= 0) . snd) $
-    zip [0 ..] $ map
-    (readArray m) [literal from .. literal to]
+-- | Dump the address fron the list 'addrs'
+dumpMemory :: [Word8] -> Memory -> [(Word8, Int64)]
+dumpMemory addrs m =
+    zip [0 ..] $
+    map (fromJust . unliteral) $
+    map (readArray m) (map literal addrs)
+
+dumpRegisters :: RegisterBank -> [(Word8, Int64)]
+dumpRegisters regs =
+    zip [0, 1, 2, 3]  $
+    map (fromJust . unliteral) $
+    map (readArray regs) [r0, r1, r2, r3]
+
+dumpFlags :: Flags -> [(Flag, Bool)]
+dumpFlags regs =
+    let fs = [Halt, Overflow, Condition] in
+    zip fs  $
+    map (fromJust . unliteral) $
+    map (readArray regs) (map flagId fs)
 
 boot :: Script -> Memory -> State
 boot src mem = State
