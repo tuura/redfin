@@ -21,7 +21,7 @@ initialiseMemory =
 -- | Dump the address fron the list 'addrs'
 dumpMemory :: [Word8] -> Memory -> [(Word8, Int64)]
 dumpMemory addrs m =
-    zip [0 ..] $
+    zip addrs $
     map (fromJust . unliteral) $
     map (readArray m) (map literal addrs)
 
