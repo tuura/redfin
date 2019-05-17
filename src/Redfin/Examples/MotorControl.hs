@@ -29,26 +29,24 @@ motorControl = do -- Don't forget the 'do'!
     -- Declare named memory locations if necessary
     let { a_max = 0; v_max = 1; dist = 2; s = 3; v = 4; s_decel = 5;
           decel_steps = 6; temp = 7; v_next = 8; }
-    -- the four registers must be referred as r0, r1, r2, r3, like in the
-    -- following stub command:
-    
+     
     -- compute s_decel
     "start" @@ ld r0 v
-    div r0 a_max
-    st r0 decel_steps
-    add_si r0 1
+    div r0 a_max                         
+    st r0 decel_steps                    -- decel_steps = v / a_max
+    add_si r0 1                          -- decel_steps + 1
     st r0 temp
     ld r0 a_max
-    mul r0 decel_steps
-    mul r0 temp
-    sra_i r0 1
+    mul r0 decel_steps                   -- a_max * decel_steps
+    mul r0 temp                          -- a_max * (decel_steps + 1)
+    sra_i r0 1                           -- s_decel = a_max * (decel_steps + 1) / 2
 
     ld r1 decel_steps
-    mul r1 a_max
-    cmpeq r1 v
+    mul r1 a_max                         
+    cmpeq r1 v                           -- a_max * decel_steps == v ?
     goto_ct "store_s_decel"
-    add r0 v
-    "store_s_decel" @@ st r0 s_decel
+    add r0 v                             -- s_decel += v
+    "store_s_decel" @@ st r0 s_decel     -- store s_decel
 
     -- compute v_next
     ld r0 v
@@ -73,17 +71,17 @@ motorControl = do -- Don't forget the 'do'!
     add r0 v
     cmpgt r0 dist                       -- s + s_decel + v > dist ?
     goto_ct "decelerate"
-    ld r1 v
+    ld r1 v                             -- keep speed of v
     goto "set_v"
     "decelerate" @@ ld r0 v
     ld r1 decel_steps
-    mul r1 a_max                       -- n * a_max
+    mul r1 a_max                       -- decel_steps * a_max
     st r1 temp                         
     cmpgt r0 temp                      -- v > n * a_max ?
     goto_ct "set_v"
     ld r1 v
-    sub r1 a_max    
-    "set_v" @@ st r1 v
+    sub r1 a_max                       -- v - a_max
+    "set_v" @@ st r1 v                 -- store decreased value of v
 
     -- speed check
     ld_i r0 0
@@ -91,7 +89,7 @@ motorControl = do -- Don't forget the 'do'!
     cmpeq r1 temp                     -- v == 0?
     goto_cf "inc_s"                   -- speed is non-zero: continue
 
-    -- in case speed is 0, check distance covered:
+    -- in case speed is 0, check if full distance has been covered:
     ld r0 s
     cmpeq r0 dist
     goto_cf "reaccelerate"
@@ -103,8 +101,8 @@ motorControl = do -- Don't forget the 'do'!
     ld r0 a_max
     "set_v2" @@ st r0 v
 
-    "inc_s" @@ ld r0 s
-    add r0 v
+    "inc_s" @@ ld r0 s                -- s += v
+    add r0 v                          
     st r0 s
     goto "start"
 
