@@ -24,11 +24,11 @@ def main(argv):
     dist=111
     a_max=2
     v_max=30
-    
+
     # state
     s=0
     v=0
-    
+
     # debug state
     a_list = [0]
     v_list = [0]
@@ -51,17 +51,17 @@ def main(argv):
             v_max = int(arg)
         elif opt in ("-d", "--distance"):
             dist = int(arg)
-    
+
     while True:
-        
+
         # Compute deceleration distance based on current speed
         decel_steps = math.floor(v/a_max)
         s_decel = a_max * decel_steps * (decel_steps + 1) / 2
         if decel_steps * a_max != v:
             s_decel += v
-    
+
         v_next = min(v_max, dist, v + a_max)
-    
+
         if s + s_decel + v_next <= dist:
             # accelerate
             v = v_next
@@ -74,7 +74,7 @@ def main(argv):
                 v = decel_steps * a_max
             else:
                 v = v - a_max
-    
+
         if v == 0:
             if s != dist:
                 # didn't quite reach our target after deceleration
@@ -86,19 +86,23 @@ def main(argv):
                 break
 
         s += v
-        
-        v_list.append(v)        
-        s_list.append(s)    
-    
-    
+
+        v_list.append(v)
+        s_list.append(s)
+
+
     # Velocity and Distance subplots
-    f, (ax1, ax2) = plt.subplots(1, 2)    
+    plt.rcParams.update({'font.size': 32})
+    f, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.set_ylim(top=v_max + 1)
     ax1.plot(v_list)
     ax1.set_title('Velocity')
+    ax1.set(xlabel='Time')
     ax2.plot(s_list)
     ax2.set_title('Distance')
+    ax2.set(xlabel='Time')
     plt.show()
-    
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

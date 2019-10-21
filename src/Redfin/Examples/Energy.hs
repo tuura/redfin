@@ -72,7 +72,9 @@ equivalence = do
         finalStateHL = simulate steps $ boot energyEstimateHighLevel mem
         resultLL = readArray (registers finalStateLL) 0
         resultHL = readArray (registers finalStateHL) 0
+        overflow = readArray (flags finalStateLL) (flagId Overflow)
     pure $ resultLL .== resultHL
+         &&& bnot overflow
 
 
 equivHaskell :: Script -> Symbolic SBool
@@ -161,32 +163,6 @@ highLevelCorrectFP = do
     pure $
         -- bnot overflow &&&
         (Fixed $ result) .>= 0
-
-simulateHighLevel :: IO ()
-simulateHighLevel = do
-    let mem = initialiseMemory [ (0, 10)
-                               , (1, 5)
-                               , (2, 3)
-                               , (3, 5), (5, 100)]
-        finalState = simulate 100 $ boot energyEstimateHighLevel mem
-        memoryDump = dumpMemory 0 255 $ memory finalState
-    putStr "Memory Dump: "
-    pPrint memoryDump
-    putStrLn $ "Estimated energy: " ++ show (readArray (registers finalState) 0)
-    putStrLn $ "Clock: " ++ show (clock finalState)
-
-simulateHighLevelFP :: IO ()
-simulateHighLevelFP = do
-    let mem = initialiseMemory [ (0, (getFixed . toFixed) 10)
-                               , (1, (getFixed . toFixed) 5)
-                               , (2, (getFixed . toFixed) 3)
-                               , (3, (getFixed . toFixed) 5), (5, 100)]
-        finalState = simulate 100 $ boot energyEstimateHighLevelFP mem
-        memoryDump = dumpMemory 0 255 $ memory finalState
-    putStr "Memory Dump: "
-    pPrint memoryDump
-    putStrLn $ "Estimated energy: " ++ show (Fixed $ readArray (registers finalState) 0)
-    putStrLn $ "Clock: " ++ show (clock finalState)
 
 -- An alternative to defining these orphan instances is to switch to SBV's type
 -- class SDivisible instead. Even better is to fix Haskell's class hierarchy.
