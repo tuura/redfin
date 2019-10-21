@@ -22,3 +22,13 @@ ghcid.txt
 .vscode/
 smt_logs/
 *.smt2
+*.pdf
+
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
