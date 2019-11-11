@@ -1,0 +1,34 @@
+\section{Formal verification in presence of unbounded loops\label{sec-motor-control}}
+
+In the last section we have demonstrated the framework's capabilities for
+formal verification on an example of the energy estimation program.
+Many programs targeting REDFIN share the distinctive feature of
+this example and have statically predictable upper \emph{bound on execution time}
+thanks to the fact that their termination does not
+depend on the input data. However, some control programs may have loops
+which are guarded by termination conditions that involve computation
+considering the input parameters of the program, thus making the loop
+\emph{unbounded}.
+
+\todo{Where to put the discussion of symbolic termination?}
+
+The presence of unbounded loops makes whole-program
+verification inapplicable in the general case~\cite{some-paper-on-symexec},
+since the state space of the program becomes infinite.
+
+In this section we apply the developed verification framework to a larger
+example of a stepper motor control program and make an accent on how
+the presence of an unbounded loop may be mitigated and which properties
+of the program can be verified with symbolic execution.
+
+\subsection{Stepper motor control program}
+
+High-level pseudo code
+
+Figure with two graphs
+
+LaTeX specification
+
+Diagram of states of the program maybe
+
+How to cut the loop out
