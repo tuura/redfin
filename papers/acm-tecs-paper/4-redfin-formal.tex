@@ -1,10 +1,10 @@
+\section{Formal verification\label{sec-verification}}
 This section presents the formal verification framework developed on top of
 the REDFIN semantic core (\S\ref{sec-transformer}) demonstrating the following
 steps of the workflow:
 
 
 
-\vspace{-0.5mm}
 \begin{itemize}
     \item Develop programs in low-level REDFIN assembly, and in a high-level
     typed language embedded in Haskell.
@@ -13,25 +13,19 @@ steps of the workflow:
     in the SBV property language.
     \item Verify the properties or obtain counterexamples.
 \end{itemize}
-\vspace{-0.5mm}
 
 \noindent
 Consider the following simple spacecraft control task.
 
-\vspace{-0.25mm}
 \begin{tcolorbox}
-\vspace{-1.5mm}
 Let $t_1$ and $t_2$ be two different time points (measured in ms),
 and $p_1$ and $p_2$ be two power values (measured in mW).
 Calculate the estimate of the total energy consumption during this period
 using linear approximation, rounding down to the nearest integer:
-\vspace{1mm}
 \[
 \textit{energyEstimate}(t_1, t_2, p_1, p_2) = \left\lfloor \frac{|t_1 - t_2| * (p_1 + p_2)}{2} \right\rfloor.
 \]
-\vspace{-2.5mm}
 \end{tcolorbox}
-\vspace{-0.25mm}
 
 \noindent
 This task looks too simple, but in fact it has a few pitfalls that,
@@ -52,13 +46,11 @@ expression:
 
 % Using Haskell's polymorphism, we can
 
-\vspace{-0.3mm}
 \begin{minted}[fontsize=\small]{haskell}
 energyEstimate :: Integral a => a -> a -> a -> a -> a
 energyEstimate t1 t2 p1 p2 =
     abs (t1 - t2) * (p1 + p2) `div` 2
 \end{minted}
-\vspace{-0.5mm}
 
 \noindent
 Thanks to polymorphism, we can treat \hs{energyEstimate} both as a numeric
@@ -100,7 +92,6 @@ We can run symbolic simulation for 100 steps, initialising the program and data
 memory of the processor using the function \hs{simulate} defined above and a
 helper function \hs{boot}.
 
-\vspace{-0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 main = do
   let dataMemory = [10, 5, 3, 5, 0, 100]
@@ -110,7 +101,6 @@ main = do
   putStrLn $ "R0: " ++ show
              (readArray (registers finalState) r0)
 \end{minted}
-\vspace{-0.5mm}
 
 \noindent
 As the simulation result we get a \hs{finalState}. We inspect it by
@@ -118,12 +108,10 @@ printing relevant components: the values of the first six memory cells, and the
 result of the computation located in the register~\hs{r0}. Note that the stack
 pointer (cell 5) holds 100, as in the initial state, which means the stack is empty.
 
-\vspace{-0.5mm}
 \begin{minted}[frame=single, fontsize=\small]{text}
 Memory dump: [10, 5, 3, 5, 5, 100]
 R0: 20
 \end{minted}
-\vspace{-1mm}
 
 Simulating programs with specific inputs is useful for diagnostic and test, but
 SMT solvers allow us to verify the correctness for \emph{all valid input
@@ -137,10 +125,8 @@ estimation program. Consider the following correctness property.
 % verification. One of the requirements is as follows.
 
 \begin{tcolorbox}
-\vspace{-1.5mm}
 Assuming that values $p_1$ and $p_2$ are non"/negative integers, the energy
 estimation subroutine must always return a non-negative integer value.
-\vspace{-1.5mm}
 \end{tcolorbox}
 
 To check that the program meets this requirement, we translate
@@ -190,13 +176,11 @@ value on the provided inputs due to an \emph{integer overflow}. We therefore
 refine the property:
 
 \begin{tcolorbox}
-\vspace{-1mm}
 According to the spacecraft power system specification, $p_1$ and $p_2$ are
 non"/negative integers not exceeding 1W. The time is measured
 from the mission start, hence $t_1$ and $t_2$ are non-negative and do not exceed
 the time span of the mission, which is 30 years. Under these assumptions,
 the energy estimation subroutine must return a non-negative integer value.
-\vspace{-1mm}
 \end{tcolorbox}
 
 \noindent
@@ -230,7 +214,6 @@ unoptimised translation of the \hs{energyEstimate} expression into assembly uses
 On the other hand, it is not difficult to write a low-level assembly program that
 computes the result using only 9 instructions:
 
-\vspace{-0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 energyEstimateLowLevel :: Script
 energyEstimateLowLevel = do
@@ -246,7 +229,6 @@ energyEstimateLowLevel = do
     halt
 \end{minted}
 \label{energyEstimateLowLevel}
-\vspace{-0.5mm}
 
 \noindent
 To support the development of hand-crafted code, we use Z3 to \emph{check the
@@ -256,12 +238,10 @@ optimise a high-level prototype and have a guarantee that no bugs were
 introduced in the process. The corresponding \hs{equivalence} check takes 11.5s.
 % (on 52 SMT clauses)
 
-% \vspace{-0.5mm}
 % \begin{minted}[frame=single,fontsize=\small]{text}
 % > proveWith z3 equivalence
 % Q.E.D.
 % \end{minted}
-% \vspace{-0.5mm}
 
 % Below we check the \hs{equivalence} of this low-level program with
 % \hs{energyEstimateHighLevel} introduced earlier.
@@ -307,14 +287,12 @@ added~1~extra clock cycle in case of a negative argument.
 % \end{minted}
 %TODO: Same can be done about power
 
-\vspace{-0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 timingAnalysis = optimize Independent $ do
   ... -- Initialise and run symbolic simulation
   minimize "Best case"  (clock finalState)
   maximize "Worst case" (clock finalState)
 \end{minted}
-\vspace{-0.5mm}
 
 \noindent
 The total delay of the program depends only on the sign of $t_1 - t_2$, thus
@@ -322,7 +300,6 @@ the best and worst cases differ only by one clock cycle. The worst case is
 achieved when the difference is negative ($t_1 - t_2 = -2$), as shown below.
 Z3 finishes in 0.5s.
 
-\vspace{2mm}
 \noindent
 \begin{minipage}{0.53\linewidth}
 \begin{minted}[frame=single,fontsize=\small]{text}

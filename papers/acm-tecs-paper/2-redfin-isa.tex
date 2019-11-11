@@ -1,3 +1,4 @@
+\section{The REDFIN architecture overview\label{sec-redfin}}
 % For many spacecraft subsystems integrated circuits are required to perform control
 % tasks or simple data processing. Typically, these integrated circuits are realised
 % with FPGAs (Field Programmable Gate Arrays) due to their flexibility and lower
@@ -22,7 +23,6 @@ following goals: (i)~simple instruction set with a small hardware footprint,
 (iii)~deterministic real-time behaviour.
 
 \subsection{REDFIN instruction set and microarchitecture}
-\vspace{-0.5mm}
 
 REDFIN instructions have a fixed width of 16 bits.
 The instruction set is based on a register-memory architecture, i.e.
@@ -33,7 +33,6 @@ program is typically smaller in comparison to traditional load/store architectur
 where all operands have to be transferred to registers before any operations can
 be performed. There are 47 instructions of the following types:
 
-\vspace{-0.5mm}
 \begin{itemize}
 \item{Load/store instructions for moving data between registers and memory, and
 loading of immediate values.}
@@ -45,7 +44,6 @@ loading of immediate values.}
 \item{Bus access instructions for read \& write operations on an AMBA AHB bus
 (not covered in this paper).}
 \end{itemize}
-\vspace{-0.5mm}
 
 The REDFIN processing core fetches instruction and data words from a small and fast
 on-chip SRAM. This only allows for execution of simple programs, however, it also
@@ -55,9 +53,7 @@ core is not pipelined and does not need to resolve data/control hazards or
 perform any form of speculative execution. These properties greatly simplify
 worst case execution time analysis.
 
-\vspace{-1.2mm}
 \subsection{Requirements for formal verification}
-\vspace{-0.5mm}
 
 Verification of \emph{functional correctness} of REDFIN programs, as defined by a
 requirement specification, clearly is an essential task for the development of space

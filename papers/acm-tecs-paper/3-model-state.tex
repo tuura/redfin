@@ -1,4 +1,4 @@
-
+\section{Modelling REDFIN in Haskell\label{sec-transformer}}
 In this section we formally define the REDFIN microarchitecture and express the
 semantics of the instruction set as an explicit and symbolic state transformer.
 
@@ -13,7 +13,6 @@ data State = State
   , flags               :: Flags
   , clock               :: Clock }
 \end{minted}
-\vspace{0mm}
 \begin{minted}[fontsize=\small]{haskell}
 type Register           = SymbolicValue Word2
 type Value              = SymbolicValue Int64
@@ -21,26 +20,20 @@ type RegisterBank       = SymbolicArray Word2 Int64
 type MemoryAddress      = SymbolicValue Word8
 type Memory             = SymbolicArray Word8 Int64
 \end{minted}
-\vspace{0mm}
 \begin{minted}[fontsize=\small]{haskell}
 type InstructionAddress = SymbolicValue Word8
 type InstructionCode    = SymbolicValue Word16
 type Program            = SymbolicArray Word8 Word16
 \end{minted}
-\vspace{0mm}
 \begin{minted}[fontsize=\small]{haskell}
 data Flag               = Condition@\,@|@\,@Overflow@\,@|@\,@Halt@\,@...
 type Flags              = SymbolicArray Flag Bool
 type Clock              = SymbolicValue Word64
 \end{minted}
-\vspace{-3.5mm}
 \caption{Basic types for modelling REDFIN.\label{fig-types}}
-\vspace{-5mm}
 \end{figure}
 
-\vspace{-1mm}
 \subsection{The REDFIN microarchitecture state}
-\vspace{-0.5mm}
 
 The main idea of our approach is to use an explicit state transformer
 semantics of the REDFIN microarchitecture. The \hs{State} of the entire
@@ -111,9 +104,7 @@ semantics of the single-instruction program $\hs{[}\hs{nop}\hs{]} \in P$.
 % instruction, but one can use the semantically equivalent instruction \hs{jmpi 0}
 % instead (i.e. jump to the next instruction).}
 
-\vspace{-3mm}
 \noindent\hrulefill~\\
-\vspace{-4.5mm}
 
 \noindent
 \textbf{Definition (program semantics):} The semantics of a program $p \in P$
@@ -132,7 +123,6 @@ is inductively defined as follows:
     instruction counter~$T_\textit{inc}$, and (iii) the state transformer
     of the instruction itself~$T_{\subhs{i}}$, or, using the order of state
     components from Fig.~\ref{fig-types}:
-    \vspace{-1mm}
     \[
     \begin{array}{lcl}
     T_\textit{fetch} & = & (r, m, ic, ir, p, f, c) \mapsto (r, m, ic, p[ic], p, f, c + 1)\\
@@ -142,16 +132,13 @@ is inductively defined as follows:
     \]
 
     % \item
-    % \vspace{-1mm}
     The semantics of a \emph{composite program} $\hs{i}\hs{:}\hs{p} \in P$,
     where the operator~\hs{:}~prepends an instruction $\hs{i} \in I$ to a program
     $\hs{p} \in P$, is defined as $T_{\subhs{i}\subhs{:}\subhs{p}} = T_{\hs{p}} \circ T_{\subhs{[}\subhs{i}\subhs{]}}$.
 
 % \end{itemize}
 
-\vspace{-2mm}
 \noindent\hrulefill~\\
-\vspace{-3.5mm}
 
 % \noindent
 We represent state transformers in Haskell using the \emph{state monad}, a
@@ -198,7 +185,6 @@ readInstructionRegister@\,@::@\,@Redfin@\,@InstructionCode
 readInstructionRegister =
   Redfin $ \s -> (instructionRegister s, s)
 \end{minted}
-\vspace{0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 executeInstruction :: Redfin ()
 executeInstruction = do
@@ -248,7 +234,6 @@ by setting~\hs{Overflow}.
 % and the function from the standard library \hs{Prelude}; \hs{fmap} applies
 % \hs{Prelude.abs} to the result of \hs{readRegister}.}
 
-\vspace{-0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 abs :: Register -> Redfin ()
 abs rX = do
@@ -274,7 +259,6 @@ As an example of a control flow REDFIN instruction consider \hs{jmpi_ct}, which
 tests the~\hs{Condition} flag, and adds the provided offset to the instruction
 counter if the flag is set.
 
-\vspace{-0.5mm}
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 jmpi_ct :: SymbolicValue Int8 -> Redfin ()
 jmpi_ct offset = do
@@ -294,9 +278,7 @@ modelling power. For example, we can simulate the processor environment
 in an external tool and feed its result to \hs{writeRegister} as if it was
 obtained in one clock cycle.
 
-\vspace{-1mm}
 \subsection{Symbolic simulation}
-\vspace{-1mm}
 
 Having defined the semantics of REDFIN programs, we can perform \emph{symbolic
 processor simulation}. The function \hs{simulate} takes a number of simulation
@@ -322,4 +304,3 @@ of REDFIN programs by fixing some parts of the state to constant values (e.g.,
 the program), and then making assertions on the resulting values of
 the symbolic part of the state, as demonstrated in the next
 section~\S\ref{sec-verification}.
-
