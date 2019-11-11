@@ -1,0 +1,51 @@
+\message{ !name(main.tex)}\documentclass[acmsmall,screen]{acmart}
+
+\bibliographystyle{ACM-Reference-Format}
+\citestyle{acmauthoryear}
+
+%% Some recommended packages.
+\usepackage{booktabs}   %% For formal tables:
+                        %% http://ctan.org/pkg/booktabs
+\usepackage{subcaption} %% For complex figures with subfigures/subcaptions
+                        %% http://ctan.org/pkg/subcaption
+
+\usepackage{bookmark}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{xspace}
+\usepackage{fancyhdr}
+
+% Haskell code snippets and useful shortcuts
+\usepackage{minted}
+\setminted[haskell]{escapeinside=@@}
+\newcommand{\hs}{\mintinline{haskell}}
+\newcommand{\cmd}[1]{\textsf{\color[rgb]{0,0,0.5} #1}}
+\newcommand{\teq}{\smaller $\sim$}
+\newcommand{\ghci}{$\lambda$>}
+\newcommand{\defeq}{\stackrel{\text{def}}{=}}
+\newcommand{\dollar}{{\color[rgb]{0.40,0.40,0.40} \$}}
+\newcommand{\std}[1]{{\color[rgb]{0,0.3,0} #1}}
+\newcommand{\blk}[1]{{\color[rgb]{0,0,0} #1}}
+\newcommand{\blu}[1]{{\color[rgb]{0,0,1.0} #1}}
+
+% Questions and tasks
+\newcommand{\q}[2]{\textbf{\color{blue} Question #1:} #2}
+\newcommand{\todo}[2]{[\textbf{\color{red} #1:} #2]}
+
+% Abbreviations for projects
+% \newcommand{\Dune}{\textsc{Dune}\xspace}
+% \newcommand{\Haxl}{\textsc{Haxl}\xspace}
+
+\begin{document}
+
+\message{ !name(main.tex) !offset(58) }
+
+\begin{acks}
+\end{acks}
+
+\newpage
+\bibliography{refs}
+
+\message{ !name(main.tex) !offset(55) }
+
+\end{document}

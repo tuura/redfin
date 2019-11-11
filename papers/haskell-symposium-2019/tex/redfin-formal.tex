@@ -1,0 +1,348 @@
+This section presents the formal verification framework developed on top of
+the REDFIN semantic core (\S\ref{sec-transformer}) demonstrating the following
+steps of the workflow:
+
+
+
+\vspace{-0.5mm}
+\begin{itemize}
+    \item Develop programs in low-level REDFIN assembly, and in a high-level
+    typed language embedded in Haskell.
+    \item Test REDFIN programs on concrete input values.
+    \item Define functional correctness and worst case execution time properties
+    in the SBV property language.
+    \item Verify the properties or obtain counterexamples.
+\end{itemize}
+\vspace{-0.5mm}
+
+\noindent
+Consider the following simple spacecraft control task.
+
+\vspace{-0.25mm}
+\begin{tcolorbox}
+\vspace{-1.5mm}
+Let $t_1$ and $t_2$ be two different time points (measured in ms),
+and $p_1$ and $p_2$ be two power values (measured in mW).
+Calculate the estimate of the total energy consumption during this period
+using linear approximation, rounding down to the nearest integer:
+\vspace{1mm}
+\[
+\textit{energyEstimate}(t_1, t_2, p_1, p_2) = \left\lfloor \frac{|t_1 - t_2| * (p_1 + p_2)}{2} \right\rfloor.
+\]
+\vspace{-2.5mm}
+\end{tcolorbox}
+\vspace{-0.25mm}
+
+\noindent
+This task looks too simple, but in fact it has a few pitfalls that,
+if left unattended, may lead to the failure of the space mission. Examples
+of subtle bugs in seemingly simple programs leading to a catastrophe include 64-bit
+to 16-bit number conversion overflow causing the destruction of Ariane~5
+rocket~\cite{bug-rocket} and the loss of NASA's Mars orbiter due to incorrect
+unit conversion~\cite{NASA:1999:Mars}. Let us develop and verify
+a REDFIN program for this task.
+
+% \subsubsection{Writing the program}
+We can write programs in the untyped REDFIN assembly, or in a typed higher-level
+expression language. The former allows engineers to hand-craft highly optimised
+programs under tight resource constraints, while the latter brings type-safety
+and faster prototyping. We start with the high-level approach and define an
+expression that can be used both as a Haskell function and a high-level REDFIN
+expression:
+
+% Using Haskell's polymorphism, we can
+
+\vspace{-0.3mm}
+\begin{minted}[fontsize=\small]{haskell}
+energyEstimate :: Integral a => a -> a -> a -> a -> a
+energyEstimate t1 t2 p1 p2 =
+    abs (t1 - t2) * (p1 + p2) `div` 2
+\end{minted}
+\vspace{-0.5mm}
+
+\noindent
+Thanks to polymorphism, we can treat \hs{energyEstimate} both as a numeric
+function, and as an abstract syntax tree that can be \emph{compiled} into a
+REDFIN assembly \hs{Script}. Due to the lack of space we omit the implementation
+of \hs{Script}, but one can think of it as a restricted version
+of the \hs{Redfin} state transformer, which we use to write \emph{programs that
+can manipulate the processor state only by executing instructions}, e.g. the
+only way to set the \hs{Overflow} flag is to execute an arithmetic instruction
+that might cause an overflow.
+
+\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+energyEstimateHighLevel :: Script
+energyEstimateHighLevel = do
+  let t1    = read (IntegerVariable 0)
+      t2    = read (IntegerVariable 1)
+      p1    = read (IntegerVariable 2)
+      p2    = read (IntegerVariable 3)
+      temp  = Temporary 4
+      stack = Stack 5
+  compile r0 stack temp (energyEstimate t1 t2 p1 p2)
+  halt
+\end{minted}
+\label{energyEstimateHighLevel}
+
+\noindent
+Here the type \hs{IntegerVariable} is used to statically distinguish between integer
+and fixed-point numbers, \hs{Temporary} to mark temporary words, so they cannot
+be mixed with inputs and outputs, and \hs{Stack} to denote the location of the
+stack pointer. The~\hs{let} block declares six adjacent memory addresses: four
+input values $\{t_1, t_2, p_1, p_2\}$, a temporary word and a stack pointer.
+We~\hs{compile} the high-level expression \hs{energyEstimate} into the assembly
+language by translating it to a sequence of REDFIN instructions. The first
+argument of the~\hs{compile} function holds the register~\hs{r0} which contains
+the estimated energy value after the program execution.
+
+% \subsubsection{Simulating the program}
+We can run symbolic simulation for 100 steps, initialising the program and data
+memory of the processor using the function \hs{simulate} defined above and a
+helper function \hs{boot}.
+
+\vspace{-0.5mm}
+\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+main = do
+  let dataMemory = [10, 5, 3, 5, 0, 100]
+      finalState = simulate 100 $
+        boot energyEstimateHighLevel dataMemory
+  printMemoryDump 0 5 (memory finalState)
+  putStrLn $ "R0: " ++ show
+             (readArray (registers finalState) r0)
+\end{minted}
+\vspace{-0.5mm}
+
+\noindent
+As the simulation result we get a \hs{finalState}. We inspect it by
+printing relevant components: the values of the first six memory cells, and the
+result of the computation located in the register~\hs{r0}. Note that the stack
+pointer (cell 5) holds 100, as in the initial state, which means the stack is empty.
+
+\vspace{-0.5mm}
+\begin{minted}[frame=single, fontsize=\small]{text}
+Memory dump: [10, 5, 3, 5, 5, 100]
+R0: 20
+\end{minted}
+\vspace{-1mm}
+
+Simulating programs with specific inputs is useful for diagnostic and test, but
+SMT solvers allow us to verify the correctness for \emph{all valid input
+combinations}. To demonstrate this, let us discover a problem in our energy
+estimation program. Consider the following correctness property.
+
+% \subsubsection{Verifying the program}
+% The project lead engineer defined a set of functional requirements for the
+% energy monitoring subsystem. The software engineering team received the
+% specification, implemented the energy monitoring subroutines, and started the
+% verification. One of the requirements is as follows.
+
+\begin{tcolorbox}
+\vspace{-1.5mm}
+Assuming that values $p_1$ and $p_2$ are non"/negative integers, the energy
+estimation subroutine must always return a non-negative integer value.
+\vspace{-1.5mm}
+\end{tcolorbox}
+
+To check that the program meets this requirement, we translate
+\hs{energyEstimateHighLevel} into an SMT formula,
+and formulate the corresponding theorem:
+
+\begin{minted}[fontsize=\small]{haskell}
+theorem = do
+  t1 <- forall "t1" -- Initialise symbolic variables
+  t2 <- forall "t2"
+  p1 <- forall "p1"
+  p2 <- forall "p2" -- And then add constraints:
+  constrain $ p1 .>= 0 &&& p2 .>= 0
+  -- Initialise the data memory with symbolic variables:
+  let dataMemory = [t1, t2, p1, p2, 0, 100]
+      finalState = simulate 100
+        (boot energyEstimateHighLevel dataMemory)
+      result = readArray (registers finalState) r0
+      halted = readArray (flags finalState) (flagId Halt)
+  return $ halted &&& result .>= 0
+       &&& result .== energyEstimate t1 t2 p1 p2
+\end{minted}
+
+\noindent
+We extract the computed result and the value of the flag \hs{Halt} from the
+\hs{finalState}, and then assert that the processor has halted, the result is
+non-negative, and is equal to that computed by the high-level Haskell expression
+\hs{energyEstimate}.
+The resulting SMT formula can be checked by Z3 in
+3.0s\footnote{We use a laptop with 2.90GHz Intel Core i5-4300U processor, 8GB
+RAM (3MB cache), and the SMT solver Z3 version 4.5.1 (64-bit).}:
+
+\begin{minted}[frame=single,fontsize=\small]{text}
+> proveWith z3 theorem
+Falsifiable. Counter-example:
+  t1 = 5190405167614263295 :: Int64
+  t2 =                   0 :: Int64
+  p1 =  149927859193384455 :: Int64
+  p2 =  157447350457463356 :: Int64
+\end{minted}
+
+%TODO: Can we obtain a simpler counterexample using SBV optimisation?
+\noindent
+Z3 has found a counterexample demonstrating that the program does not
+satisfy the above property. Indeed, the expression evaluates to a negative
+value on the provided inputs due to an \emph{integer overflow}. We therefore
+refine the property:
+
+\begin{tcolorbox}
+\vspace{-1mm}
+According to the spacecraft power system specification, $p_1$ and $p_2$ are
+non"/negative integers not exceeding 1W. The time is measured
+from the mission start, hence $t_1$ and $t_2$ are non-negative and do not exceed
+the time span of the mission, which is 30 years. Under these assumptions,
+the energy estimation subroutine must return a non-negative integer value.
+\vspace{-1mm}
+\end{tcolorbox}
+
+\noindent
+We need to modify time and power constraints accordingly:
+% \footnote{We are not absolutely
+% precise here. We do not distinguish between regular and leap years, and use
+% a conservative upper bound of 366 days per year.}
+
+\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+constrain $ p1 .<= toMilliWatts   ( 1 :: Watt)
+        &&& t1 .<= toMilliSeconds (30 :: Year)
+        &&& t1 .>= 0 &&& t2 .>= 0 &&& ... -- etc.
+\end{minted}
+
+\noindent
+Rerunning Z3 produces the desired \textsf{QED} outcome in 4.8s.
+
+The refinement has rendered the integer overflow impossible;
+in particular, \hs{abs} can never be called with~$-2^{63}$
+within the mission parameters. Such guarantee fundamentally requires
+solving an SMT problem, even if it is done at the type level, e.g. using
+\emph{refinement types}~\cite{vazou2014refinement}.
+
+% \subsubsection{Checking program equivalence}
+The statically typed high-level expression language is very convenient for
+writing REDFIN programs, however, an experienced engineer can often find a way
+to improve the resulting code. In some particularly resource-constrained situations,
+a fully hand-crafted assembly code may be required. As an example, a direct
+unoptimised translation of the \hs{energyEstimate} expression into assembly uses
+79 instructions, most of them for \hs{Stack} manipulation.
+On the other hand, it is not difficult to write a low-level assembly program that
+computes the result using only 9 instructions:
+
+\vspace{-0.5mm}
+\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+energyEstimateLowLevel :: Script
+energyEstimateLowLevel = do
+    let { t1 = 0; t2 = 1; p1 = 2; p2 = 3 }
+    ld r0 t1
+    sub r0 t2
+    abs r0
+    ld r1 p1
+    add r1 p2
+    st r1 p2
+    mul r0 p2
+    sra_i r0 1
+    halt
+\end{minted}
+\label{energyEstimateLowLevel}
+\vspace{-0.5mm}
+
+\noindent
+To support the development of hand-crafted code, we use Z3 to \emph{check the
+equivalence of REDFIN programs} by verifying that they produce
+the same output on all valid inputs. This allows an engineer to
+optimise a high-level prototype and have a guarantee that no bugs were
+introduced in the process. The corresponding \hs{equivalence} check takes 11.5s.
+% (on 52 SMT clauses)
+
+% \vspace{-0.5mm}
+% \begin{minted}[frame=single,fontsize=\small]{text}
+% > proveWith z3 equivalence
+% Q.E.D.
+% \end{minted}
+% \vspace{-0.5mm}
+
+% Below we check the \hs{equivalence} of this low-level program with
+% \hs{energyEstimateHighLevel} introduced earlier.
+
+% \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+% equivalence = do
+%   t1 <- forall "t1"
+%   t2 <- forall "t2"
+%   p1 <- forall "p1"
+%   p2 <- forall "p2"
+%   constrain $ p1 .>= 0 &&& p2 .>= 0
+%       &&& p1 .<= toMilliWatts   ( 1 :: Watt)
+%       &&& p2 .<= toMilliWatts   ( 1 :: Watt)
+%       &&& t1 .>= 0 &&& t2 .>= 0
+%       &&& t1 .<= toMilliSeconds (30 :: Year)
+%       &&& t2 .<= toMilliSeconds (30 :: Year)
+%   let memory   = [t1, t2, p1, p2, 0, 100]
+%       llState  = simulate 100 (boot energyEstimateLowLevel  memory)
+%       hlState  = simulate 100 (boot energyEstimateHighLevel memory)
+%       llResult = readArray (registers llState) r0
+%       hlResult = readArray (registers hlState) r0
+%   return $ llResult .== hlResult
+% \end{minted}
+
+% \subsubsection{Program timing analysis}
+
+Every call of the~\hs{executeInstruction} function advances the \hs{clock} field
+of the \hs{State} (see Fig.~\ref{fig-types}) by the appropriate number of
+cycles, precisely matching the hardware implementation. This allows us to
+perform~\emph{best/worst case execution timing analysis} using the
+optimisation facilities of SBV and Z3. As an example,
+let us determine the minimum and maximum number of clock cycles required for
+executing~\hs{energyEstimateLowLevel}. To make this example more
+interesting, we modified the semantics of the instruction~\hs{abs} and
+added~1~extra clock cycle in case of a negative argument.
+% by conditionally performing
+% \hs{delay 1} in the state transformer \hs{abs}.
+
+% \begin{minted}{haskell}
+% delay :: Clock -> Redfin ()
+% delay cycles =
+%     Redfin $ \s -> ((), s { clock = clock s + cycles })
+% \end{minted}
+%TODO: Same can be done about power
+
+\vspace{-0.5mm}
+\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+timingAnalysis = optimize Independent $ do
+  ... -- Initialise and run symbolic simulation
+  minimize "Best case"  (clock finalState)
+  maximize "Worst case" (clock finalState)
+\end{minted}
+\vspace{-0.5mm}
+
+\noindent
+The total delay of the program depends only on the sign of $t_1 - t_2$, thus
+the best and worst cases differ only by one clock cycle. The worst case is
+achieved when the difference is negative ($t_1 - t_2 = -2$), as shown below.
+Z3 finishes in 0.5s.
+
+\vspace{2mm}
+\noindent
+\begin{minipage}{0.53\linewidth}
+\begin{minted}[frame=single,fontsize=\small]{text}
+Objective "Best case":
+Optimal model:
+  t1        = 549755813888
+  t2        =  17179869184
+  p1        =            0
+  p2        =            0
+  Best case =           12
+\end{minted}
+\end{minipage}
+\begin{minipage}{0.46\linewidth}
+\begin{minted}[frame=single,fontsize=\small]{text}
+Objective "Worst case":
+Optimal model:
+  t1         = 65535
+  t2         = 65537
+  p1         =     0
+  p2         =     0
+  Worst case =    13
+\end{minted}
+\end{minipage}

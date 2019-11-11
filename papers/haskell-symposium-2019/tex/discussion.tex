@@ -1,0 +1,146 @@
+
+% The presented approach has been implemented and is planned to be released at the
+% conference (this paper is currently under review).
+
+% In this section we discuss our design choices and achieved
+% results, comparing them with the project's initial goals: (i)~providing a unified
+% specification, testing, and formal verification framework that is (ii)~understandable
+% and convenient to use by the REDFIN engineering team, and (iii)~allows the team
+% to co-develop REDFIN software and hardware, by extending and modifying the
+% default instruction semantics.
+
+% \subsection{From hardware to untyped assembly to typed software}
+
+% The proposed approach covers two levels of organisation of computer systems: the
+% hardware microarchitecture (the state monad \hs{Redfin},~\S\ref{sec-transformer}),
+% and the instruction set architecture (the assembly monad
+% \hs{Script},~\S\ref{sec-verification}). These two levels are very different: the
+% former allows hardware engineers to precisely capture the semantics of
+% instructions (and has proven useful in exposing underspecified behaviours),
+% whereas the latter does not have a direct access to the microarchitectural level
+% and is used to symbolically \emph{execute} the semantics, allowing software
+% engineers to \emph{observe} the results and \emph{reason} about program
+% correctness.
+
+As the previous section~\S\ref{sec-verification} demonstrates, the presented
+approach provides a unified specification, testing, and formal verification
+framework. It allows the REDFIN engineering team to co-develop REDFIN software
+and hardware, by extending and modifying the default instruction semantics.
+By using Haskell as a metalanguage, one can implement higher-level languages on
+top of the REDFIN assembly, such as our simple statically-typed language for
+arithmetic expressions.
+
+Static typing, polymorphism, \textsf{do}-notation, and availability of a mature
+symbolic manipulation library~(SBV) were the key factors for choosing Haskell
+for this project. We also have a prototype implementation in the
+dependently-typed language Idris~\cite{JFP:9060502} that allows us to verify
+more sophisticated properties at the type level, however at the time of writing
+there is no equivalent of the SBV library in Idris, which is a significant
+practical disadvantage.
+% Dependent Haskell~\cite{weirich2017dependent} is a
+% pos alternative.
+
+% \subsection{Uniform development, testing and verification environment}
+
+The \hs{Script} monad was engineered to provide familiar assembly mnemonics and
+directives (e.g. labels), which allows engineers to start
+using the framework for developing REDFIN programs even without prior Haskell
+experience, hopefully increasing the uptake of the framework.
+
+Thanks to symbolic simulation, we can uniformly handle both concrete and
+symbolic values, reusing the same code base and infrastructure for testing and
+formal verification.
+Testing yields trivial SMT problems that can be solved in sub-second time.
+Formal verification is more expensive: in our experiments,
+programs of realistic sizes (typical REDFIN programs have hundreds of
+instructions) required 10-15 minutes, but one can
+easily construct tiny programs that will grind any SMT solver to a halt:
+for example, analysis of a single multiplication instruction can take half an
+hour if it is required to factor 64-bit numbers --- try to factor
+4611686585363088391 with an SMT solver! In such cases, conservatively proving
+some of the correctness properties at the type level can significantly increase
+the productivity. As a microbenchmark, we verified the correctness of an array
+summation program, reporting the number of SMT clauses and Z3 runtime for
+low-level (LL) and high-level (HL) programs:
+
+\vspace{2mm}
+\noindent
+{\smaller\begin{tabular}{l||c|c|c|c|c}
+\hline
+Benchmark        & Array & Clauses & Clauses & Time    & Time    \\
+                 & size  & LL      & HL      & LL      & HL      \\\hline
+Overflow:        & 9     & 286     & 260     & 1.482s  & 0.443s  \\
+values not       & 12    & 492     & 453     & 3.604s  & 1.365s  \\
+constrained      & 15    & 740     & 688     & 49.969s & 7.362s  \\
+                 & 18    & 1030    & 965     & 76.757s & 88.458s \\\hline
+No overflow:     & 9     & 318     & 292     & 0.467s  & 0.119s  \\
+all values       & 12    & 549     & 510     & 0.739s  & 0.682s  \\
+in $[1,1000]$    & 15    & 828     & 776     & 1.839s  & 6.408s  \\
+                 & 18    & 1155    & 1090    & 9.944s  & 72.880s \\\hline
+Equivalence      & 9     & 258     & 261     & 0.039s  & 0.097s  \\
+to the \hs{sum}  & 12    & 495     & 459     & 0.053s  & 0.647s  \\
+function         & 15    & 708     & 702     & 0.311s  & 7.322s  \\
+                 & 18    & 1005    & 990     & 2.633s  & 71.896s \\\hline
+\end{tabular}
+}
+
+% {\smaller
+% \begin{tabular}{c||c|c|c|c|c}
+% Array size & 6 & 9 & 12 & 15 & 18 \\\hline
+% Low-level & 0.022s & 0.039s & 0.053s & 0.311s & 2.633s \\
+% High-level & 0.040s & 0.097s & 0.647s & 7.322s & 71.896s \\
+% \end{tabular}
+% }
+
+% Although proving properties about the hardware implementation is left for future
+% work, the developed infrastructure provides a way to generate testsuites for the
+% processing core from the formal semantics of REDFIN instructions. Furthermore,
+% one can use the semantics to generate parts of the hardware
+% implementation~\cite{reid2016cav} or synthesise efficient instruction
+% subsets~\cite{mokhov2014synthesis}.
+
+% \begin{table*}[t]
+% \vspace{-1mm}
+% \smaller
+% \centering
+% \begin{tabular}{l||c|c|c|c|c}
+% \hline
+% Benchmark        & Array & Formula & Formula & Time    & Time    \\
+%                  & size  & size LL & size HL & LL      & HL      \\\hline
+% Positive         & 9     & 286     & 260     & 1.482s  & 0.443s  \\
+% overflow         & 12    & 492     & 453     & 3.604s  & 1.365s  \\
+% check            & 15    & 740     & 688     & 49.969s & 7.362s  \\
+%                  & 18    & 1030    & 965     & 76.757s & 88.458s \\\hline\hline
+% Negative         & 9     & 318     & 292     & 0.467s  & 0.119s  \\
+% overflow         & 12    & 549     & 510     & 0.739s  & 0.682s  \\
+% check            & 15    & 828     & 776     & 1.839s  & 6.408s  \\
+%                  & 18    & 1155    & 1090    & 9.944s  & 72.880s \\\hline\hline
+% Equivalent       & 9     & 258     & 261     & 0.039s  & 0.097s  \\
+% to the \hs{sum}  & 12    & 495     & 459     & 0.053s  & 0.647s  \\
+% function         & 15    & 708     & 702     & 0.311s  & 7.322s  \\
+%                  & 18    & 1005    & 990     & 2.633s  & 71.896s \\\hline
+% \end{tabular}
+% \caption{Verification of low-level and high-level array summation procedures
+% \label{tab-sum-benchmark}}
+% \caption*{\\$^{(*)}$assuming the summands are in range $[1, 1000]$.
+% $^{(**)}$procedure is functionally equivalent to the Haskell's \hs{sum} function.}
+% \vspace{-8mm}
+% \end{table*}
+
+% Benchmark        & Array & Formula & Formula & Time    & Time    \\
+%                  & size  & size LL & size HL & LL      & HL      \\\hline
+% Positive         & 6     & 122     & 109     & 0.503s  & 0.288s  \\
+% overflow         & 9     & 286     & 260     & 1.482s  & 0.443s  \\
+% check            & 12    & 492     & 453     & 3.604s  & 1.365s  \\
+%                  & 15    & 740     & 688     & 49.969s & 7.362s  \\
+%                  & 18    & 1030    & 965     & 76.757s & 88.458s \\\hline\hline
+% Negative         & 6     & 135     & 122     & 0.171s  & 0.070s  \\
+% overflow         & 9     & 318     & 292     & 0.467s  & 0.119s  \\
+% check            & 12    & 549     & 510     & 0.739s  & 0.682s  \\
+%                  & 15    & 828     & 776     & 1.839s  & 6.408s  \\
+%                  & 18    & 1155    & 1090    & 9.944s  & 72.880s \\\hline\hline
+% Equivalent       & 6     & 105     & 108     & 0.022s  & 0.040s  \\
+% to the \hs{sum}  & 9     & 258     & 261     & 0.039s  & 0.097s  \\
+% function         & 12    & 495     & 459     & 0.053s  & 0.647s  \\
+%                  & 15    & 708     & 702     & 0.311s  & 7.322s  \\
+%                  & 18    & 1005    & 990     & 2.633s  & 71.896s \\\hline

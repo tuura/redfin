@@ -2,10 +2,10 @@ TARGET=paper
 all: pdf
 
 paper.pdf: $(wildcard *.tex) $(wildcard *.bib)
-	- pdflatex -shell-escape main
+	- pdflatex -synctex=1 -shell-escape main
 	- bibtex main
-	- pdflatex -shell-escape main
-	pdflatex -shell-escape main
+	- pdflatex -synctex=1 -shell-escape main
+	pdflatex -synctex=1 -shell-escape main
 
 pdf: paper.pdf
 
