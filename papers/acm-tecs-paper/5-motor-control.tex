@@ -152,6 +152,29 @@ This detailed verification algorithms has several parameters that need to be spe
       body of the loop will always terminate this bound can be calculated in advance.
 \end{itemize}
 
+\subsection{Pruning branches}
+
+Every conditional jump instruction produces two branches in the execution tree: the one
+where the path condition is conjoined with the jump's guard and the one where it is
+conjoined with the guard's negation~\ref{fig-sym-tree}. However, if the resulting
+conjunction is unsatisfiable, the corresponding branch does not have to be explored
+and can be pruned. Thus the symbolic execution engine need to call an SMT solver every
+time a conditional jump is encountered to check if the path conditions of the branches
+are satisfiable.
+
+Checking satisfiability of execution path is essential to mitigation the path explosion
+problem. Pre-condition, when available, is assigned as the initial path condition and thus
+will become a subterm of every formula submitted to the solver. Identifying correct pre-conditions is essential for verification since they may drastically reduce the number of satisfiable paths in the symbolic execution tree of the program that is being verified.
+
+\begin{figure}[h]
+\centerline{\includegraphics[scale=0.4]{fig/sym-tree.pdf}}
+\caption{Branching symbolic execution\label{fig-sym-tree}}
+\Description[Please consult the text of this section for the description]{}
+\caption{Loop invariant: velocity and acceleration are within bounds}
+\end{figure}
+
+
+
 Give the preconditions, an example of the execution path, talk about constant folding
 and SMT-solving to prove unsatisfiable paths, make a table(?) with results for different
 preconditions: number of path, time to solve a path, length of the path maybe.
