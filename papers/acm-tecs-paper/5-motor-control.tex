@@ -118,6 +118,7 @@ ensures that velocity and acceleration always stay within their safe bounds. We
 formalise it as the following predicate that universally quantifies over the
 program's inputs and the loop's state:
 
+\begin{figure}[h]
 \begin{tcolorbox}
 \LARGE{
 \[
@@ -125,9 +126,11 @@ program's inputs and the loop's state:
   \ v \leq v_{max} \land \left| v_{next} - v \right| \leq a_{max}
 \]}
 \end{tcolorbox}
+\caption{Motor control loop invariant\label{fig-loop-invariant}}
+\end{figure}
 
 \noindent
-We will verify the loop invariant by using the verification framework in the
+We will verify the loop invariant by using the verification framework in
 \emph{branching} mode~\S\ref{sec-transformer}. While symbolic execution with
 merging, which is implemented by the framework's \emph{merging} mode, allows
 for intuitive formulation of properties for whole-program verification and
@@ -136,72 +139,45 @@ reported in the section~\S\ref{sec-verification}, in presence of branches guarde
 by symbolic values it suffers from \emph{symbolic non-termination}.
 Thus, for verifying the loop invariant, we rely on branching symbolic execution.
 
-To verify the loop invariant we take the following approach:
+To verify the loop invariant we take the generic following approach:
 
 \begin{itemize}
-  \item Obtain the binary tree-shaped trace by \emph{bounded} symbolic execution
-  in \emph{branching} mode
+  \item Obtain the binary tree-shaped trace by symbolic execution in~\emph{branching} mode
   \item Split the trace into linear paths, thus enumerating all the possible
     execution scenarios
   \item For every path perform the analysis
     \begin{enumerate}
-      \item Extract the relevant parts of the state from the \emph{last} node in
-            the path, i.e. symbolic expressions stored in
-            registers, memory cells or flags
-      \item Construct a symbolic expression representing the \emph{property to check},
-            which would involve the expressions obtained in the previous step
-      \item Extract the \emph{path condition} from the /last/ node in the path
-      \item Formulate the \emph{preconditions} of the program
+      \item Extract the relevant parts of the state from the~\emph{last} node in
+        the path, i.e. symbolic expressions stored representing $s$,
+        $v$ and $v_{next}$
+      \item Extract the terminal~\emph{path condition} $\phi$
+            from the~\emph{last} node in the path
+      \item Construct a symbolic expression representing the~\emph{verification condition},
+            $\psi$, i.e. the one in figure~\ref{fig-loop-invariant}
       \item To verify the property in the given path by checking the following
-            formula for satisfiability:
-              preconditions /\ path constraints /\ ¬ property to check
+        formula for satisfiability: $\phi \land \lnot\psi$, i.e. the path condition
+        conjoined with negated verification condition
+
     \end{enumerate}
     \item  The property holds if and only if for every path the solver returns
-           \hs{Unsatisfiable}, i.e. there are no assignments of the variables which
+           \emph{unsat}, i.e. there are no assignments of the variables which
            satisfy the~\emph{negation} of the property to check, considering the
-           preconditions and the path condition.
+           terminal path condition.
 \end{itemize}
-
-This detailed verification algorithms has several parameters that need to be specified:
-
-\begin{itemize}
-\item Preconditions on $v_{max}$ and $a_{max}$
-\item Symbolic execution bound, i.e. for how many steps perform the execution. Since the
-      body of the loop will always terminate this bound can be calculated in advance.
-\end{itemize}
-
-\subsection{Pruning branches}
 
 As illustrated by figure~\ref{fig-sym-tree}, every conditional jump instruction produces
 two branches in the symbolic execution tree: the one
 where the current path condition is conjoined with the jump's guard and the one where it is
 conjoined with the guard's negation. However, if the resulting
-conjunction is unsatisfiable, the corresponding branch does not have to be explored
-and can be pruned. Thus the symbolic execution engine need to call an SMT solver every
+conjunction is unsatisfiable, the corresponding branch need not to be explored
+and can be safely pruned.
+Thus the symbolic execution engine need to call an SMT solver every
 time a conditional jump is encountered to check if the path conditions of the branches
 are satisfiable.
 
 Checking satisfiability of execution path is essential to mitigation the path explosion
 problem. Pre-condition, when available, is assigned as the initial path condition and thus
-will become a subterm of every formula submitted to the solver. Identifying correct preconditions
-is essential for verification since they may drastically reduce the number of satisfiable paths
-in the symbolic execution tree of the program that is being verified.
-
-
-Give the preconditions, an example of the execution path, talk about constant folding
-and SMT-solving to prove unsatisfiable paths, make a table(?) with results for different
-preconditions: number of path, time to solve a path, length of the path maybe.
-
-\subsection{Limitations}
-
-
-
-\subsection{NOTES}
-
-``Pre-conditions, when
-available, may be leveraged to reduce the size of the input
-data domains and to only generate test inputs that satisfy
-the pre-conditions.''
-
-
----
+will become a subterm of every formula submitted to the solver.
+Identifying correct preconditions is essential for verification since they may
+drastically reduce the number of satisfiable paths in the symbolic execution tree
+of the program that is being verified.
