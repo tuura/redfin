@@ -1,18 +1,18 @@
-\section{Formal verification in presence of unbounded loops\label{sec-motor-control}}
+\section{Symbolic execution in presence of unbounded loops\label{sec-motor-control}}
 
 Many programs targeting REDFIN share the distinctive feature of
 the energy estimation program considered in section~\ref{sec-verification},
-i.e. the existence of an  upper \emph{bound on execution time},
-thanks to the fact that their termination does not
-depend on the input data. However, other programs may have loops
-which are guarded by termination conditions that involve computation
+i.e. the existence of an  \emph{upper bound on execution time},
+since their termination does not depend on input data.
+However, other programs may have a loop
+which is guarded by a termination condition that involves computation
 considering the input parameters of the program, thus making the loop
 \emph{unbounded}.
 
 Presence of unbounded loops makes program verification by symbolic execution considerably
 harder~\cite[p.~50:20]{SurveySymExec-CSUR18}, since the number of program execution
-paths becomes infinite. In this section we apply the developed verification framework
-to a larger example of a stepper motor control program and verify one of its essential
+paths becomes infinite. In this section we consider an example
+of control program that drives a stepper motor and verify one of its essential
 safety properties by formulating it as a~\emph{loop invariant} and ensuring that the
 invariant holds for every possible state of the loop.
 
@@ -20,49 +20,54 @@ invariant holds for every possible state of the loop.
 
 Stepper motors are often deployed as parts of antenna and solar panel pointing units
 in space satellites. We consider a program for controlling a motor with
-one degree of freedom. The program, given the distance to move the motor and safety
-bounds on velocity and acceleration, will
+one degree of freedom.
 
-The algorithm~\ref{alg-motor} expects three input
-parameters: $dist$ --- the distance to move the motor, $v\_max$ --- the maximal permitted
-velocity and $a\_max$ --- the maximal permitted acceleration and computes a series of
-speed and velocity values that will be used to move the motor. The conditional statement on
-starting in line 9 decides whether to accelerate the motor, to keep it on steady speed or
-to decelerate the motor; see~\ref{fig-motor} for example plots of velocity and distance travelled
+The control algorithm~\ref{alg-motor} expects three input
+parameters: $dist$ --- the distance to move the motor, $v_{max}$ --- the maximal permitted
+velocity and $a_{max}$ --- the maximal permitted acceleration and computes a series of
+speed and velocity values that will be used to move the motor. Since the algorithm is
+designed for controlling a stepper motor, the calculations happen in~\emph{discreet time},
+i.e. every iteration of the $while$ loop corresponds to a time interval; thus
+the deceleration (i.e. braking) distance is computed as
+$s_{decel} = a_{max} \cdot \frac{decel\_steps \cdot (decel\_steps + 1)}{2}$, where
+$decel\_steps = \frac{v}{a_{max}}$ is the number of decelerating iterations
+needed for a full stop. The conditional statement on starting in line 9 decides whether
+to accelerate, to keep the speed or to decelerate;
+see fig.~\ref{fig-motor} for example plots of velocity and distance travelled
 against time. The spike on the bottom-left of the velocity graph illustrates
 the edge covered by the conditional statement on line 18: if the velocity is zero, but the target
-distance has not yet been reached, the motor must be moved a bit further.
+distance has not yet been reached, the motor must be moved further.
 
 \begin{algorithm}[h]
   \begin{algorithmic}[1]
-\Require {$dist$, $v\_max$, $a\_max$}
+\Require {$dist$, $v_{max}$, $a_{max}$}
 \State $s \gets 0$
 \State $v \gets 0$
 \While {$true$}
   % Compute deceleration distance based on current speed
-  \State $decel\_steps\gets \lfloor v / a\_max \rfloor$
+  \State $decel\_steps\gets v / a_{max}$
   \algorithmiccomment{Compute deceleration distance based on current speed}
-  \State $s\_decel \gets a\_max \cdot (decel\_steps + 1) / 2$
-  \If {$decel\_steps \cdot a\_max \neq v$}
-    \State $s\_decel \gets s\_decel + v$
+  \State $s_{decel} \gets a_{max} \cdot decel\_steps \cdot (decel\_steps + 1) / 2$
+  \If {$decel\_steps \cdot a_{max} \neq v$}
+    \State $s_{decel} \gets s_{decel} + v$
   \EndIf
-  \State {$v\_next = min(v\_max, dist, v + a\_max)$}
-  \If {$s + s\_decel + v\_next \leq dist$}
-    \State $v \gets v\_next$ \algorithmiccomment{accelerate}
-  \ElsIf {$s + s\_decel + v \leq dist$}
+  \State {$v_{next} = min(v_{max}, dist, v + a_{max})$}
+  \If {$s + s_{decel} + v_{next} \leq dist$}
+    \State $v \gets v_{next}$ \algorithmiccomment{accelerate}
+  \ElsIf {$s + s_{decel} + v \leq dist$}
     \State $ v \gets v $     \algorithmiccomment{keep speed}
   \Else
      \algorithmiccomment{decelerate}
-    \If {$v > decel\_steps \cdot a\_max$}
-      \State $v \gets decel\_steps \cdot a\_max$
+    \If {$v > decel\_steps \cdot a_{max}$}
+      \State $v \gets decel\_steps \cdot a_{max}$
     \Else
-      \State $v \gets v - a\_max$
+      \State $v \gets v - a_{max}$
     \EndIf
   \If {$v = 0$}
     \If {$s \neq dist$}  \algorithmiccomment{accelerate again to reach target}
       % didn't quite reach our target after deceleration
       % => accelerate again
-      \State $v \gets min(dist - s, a\_max)$
+      \State $v \gets min(dist - s, a_{max})$
     \Else
       % reached target
       \State $break$  \algorithmiccomment{terminate execution}
@@ -79,24 +84,23 @@ distance has not yet been reached, the motor must be moved a bit further.
 \end{figure}
 
 To be deployed into REDFIN, the algorithm~\ref{alg-motor} must be manually
-re-implemented in REDFIN assembly. The resulting assembly program comprises 85 lines of
+implemented in REDFIN assembly. The resulting assembly program comprises 85 lines of
 assembly and closely mirrors the high-level pseudocode. As a sample, consider a fragment of
 the program's symbolic execution tree that corresponds to the decision whether to
-accelerate, keep speed or decelerate the motor~\ref{fig-sym-tree}.
+accelerate, keep speed or decelerate the motor (fig.~\ref{fig-sym-tree}).
 
 \begin{figure}[h]
-\centerline{\includegraphics[scale=0.4]{fig/sym-tree-1.pdf}}
-\caption{Symbolic execution tree of code fragment with conditional branching\label{fig-sym-tree}}
+\centerline{\includegraphics[scale=0.4]{fig/sym-tree.pdf}}
+\caption{Symbolic execution tree of a code fragment with conditional branching\label{fig-sym-tree}}
 \Description[Please consult the text of this section for the description]{}
 \end{figure}
 
 The decision is based on first estimating the resulting distance travelled using
-the next potential value $v\_next$ as velocity and if $dist$ is not covered by that
+the next potential value $v_{next}$ as velocity and if $dist$ is not covered by that
 the motor will be accelerated; otherwise the resulting distance gets estimated
-using the current velocity $v$ and in case $v$ is sufficient it is kept as the
-velocity; otherwise the motor will be decelerated. The changes of speed may be
-also seen from the velocity against time plot~\ref{fig-motor}.
-
+using the current velocity $v$ and in case $v$ is sufficient it will be kept as the
+velocity; otherwise the motor will be decelerated. These changes of velocity in
+a simulation on concrete data are illustrated by plot~\ref{fig-motor} (left).
 
 \subsection{Loop invariant verification}
 
@@ -106,9 +110,9 @@ acceleration of the motor must be kept in safe limits. This verification conditi
 is motivated by the correctness requirements of the whole space satellite unit.
 
 More formally, the verification condition means
-that in any iteration of the control program loop the values of the
-expressions $v$, the velocity, and $\left| v\_next - v \right|$,
-the acceleration, must never exceed the parameters $v\_max$ and $a\_max$, respectively.
+that in any iteration of the loop the values of the
+expressions $v$, velocity, and $\left| v_{next} - v \right|$,
+acceleration, must never exceed the parameters $v_{max}$ and $a_{max}$, respectively.
 This property is the loop invariant for the motor control program which
 ensures that velocity and acceleration always stay within their safe bounds. We
 formalise it as the following predicate that universally quantifies over the
@@ -117,8 +121,8 @@ program's inputs and the loop's state:
 \begin{tcolorbox}
 \LARGE{
 \[
-  \forall\ v\_max\ a\_max\ v\ v\_next\ s,
-  \ v \leq v\_max \land \left| v\_next - v \right| \leq a\_max
+  \forall\ v_{max}\ a_{max}\ v\ v_{next}\ s,
+  \ v \leq v_{max} \land \left| v_{next} - v \right| \leq a_{max}
 \]}
 \end{tcolorbox}
 
@@ -161,7 +165,7 @@ To verify the loop invariant we take the following approach:
 This detailed verification algorithms has several parameters that need to be specified:
 
 \begin{itemize}
-\item Preconditions on $v\_max$ and $a\_max$
+\item Preconditions on $v_{max}$ and $a_{max}$
 \item Symbolic execution bound, i.e. for how many steps perform the execution. Since the
       body of the loop will always terminate this bound can be calculated in advance.
 \end{itemize}
@@ -187,6 +191,10 @@ in the symbolic execution tree of the program that is being verified.
 Give the preconditions, an example of the execution path, talk about constant folding
 and SMT-solving to prove unsatisfiable paths, make a table(?) with results for different
 preconditions: number of path, time to solve a path, length of the path maybe.
+
+\subsection{Limitations}
+
+
 
 \subsection{NOTES}
 
