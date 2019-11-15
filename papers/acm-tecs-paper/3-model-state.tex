@@ -281,8 +281,30 @@ obtained in one clock cycle.
 
 \subsection{Symbolic simulation}
 
-Having defined the semantics of REDFIN programs, we can perform \emph{symbolic
-processor simulation}. The function \hs{simulate} takes a number of simulation
+Having defined the semantics of REDFIN programs, we can perform
+\emph{symbolic processor simulation}.
+
+There are many flavours of symbolic execution~\cite{SurveySymExec-CSUR18}
+and there is no single answer to the question of which one is the best.
+The choice of the symbolic execution technique depends heavily on the
+verification scenarios. The verification framework for REDFIN is designed
+to deal with two main classes of programs: (i) arithmetic calculations that
+are statically provable to be terminating and (ii) control programs with
+unbounded loops whose termination depend on dynamic input data. We approach
+verification of the former using~\emph{symbolic execution with merging} that
+allows for whole-program verification by translating the program and the
+verification condition into a single SMT formula. However, unconditional merging
+does not work is well\todo{~\cite{reference}} for non-terminating programs; thus
+we employ the traditional approach to symbolic execution that generates from programs
+the tree-shaped traces which could be split into separate execution paths for path-by-path
+analysis and verification. The verification framework thus works in two
+modes:~\emph{merging} and~\emph{branching}. See section~\ref{sec-verification} for
+a verification example using the merging mode and section~\ref{sec-motor-control} for
+an approach to verify a non-terminating program in branching mode.
+
+\subsubsection{Merging mode}
+
+The function \hs{simulate} takes a number of simulation
 steps~$N$ and an initial symbolic \hs{State} as input, and executes
 \hs{executeInstruction} defined above $N$ times. In each \hs{state} we
 merge two possible futures: (i) if the \hs{Halt} flag is set, we continue the
@@ -292,16 +314,38 @@ simulation from the \hs{next} state, (ii) otherwise we remain in the current
 \begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
 simulate :: Int -> State -> State
 simulate steps s | steps <= 0 = s
-                 | otherwise  =
-  ite halted s (simulate (steps - 1) next)
+                 | otherwise  = ite halted s (simulate (steps - 1) next)
  where halted = readArray (flags s) (flagId Halt)
        next   = snd (transform executeInstruction s)
 \end{minted}
 
-\noindent
-%TODO: What about program synthesis?
+The function~\hs{ite} here performs symbolic merging of two possible states:
+where the halted flag is set and not. The underlying semantics of instructions
+will also perform merging on encounter of every branching instruction.
+
+\subsubsection{Branching mode}
+
+In branching mode, on the contrary, we do not perform any merging at all and generate a
+tree-shaped symbolic execution trace with path constraints attached to the states storing
+program states. We take advantage of the fact that the semantics of the~\hs{halt}
+instruction updates the~\hs{Halt} flag with concrete boolean value~\hs{True} and thus we
+can use the native Haskell conditional operator to check if the current execution path
+has terminated and return a leaf node. Otherwise, we generate~\hs{children} -- a list of successor states, recursively calling the~\hs{simulate} function with every child as the initial state and attaching the results as leaves to the current node.
+
+\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+simulate :: Int -> State -> Trace State
+simulate steps s = getTrace $ do
+    modify (+ 1)
+    n <- get
+    let halted = readArray (flags s) (flagId Halt)
+    if | steps <= 0 || halted -> pure (mkTrace (Node n s) [])
+       | otherwise -> do
+           children <- traverse (simulate (steps - 1)) (executeInstruction s)
+           pure $ mkTrace (Node n s) children
+\end{minted}
+
 Symbolic simulation is very powerful. It allows us to formally verify properties
 of REDFIN programs by fixing some parts of the state to constant values (e.g.,
 the program), and then making assertions on the resulting values of
 the symbolic part of the state, as demonstrated in the next
-section~\S\ref{sec-verification}.
+sections~\S\ref{sec-verification} and~\S\ref{sec-motor-control}.

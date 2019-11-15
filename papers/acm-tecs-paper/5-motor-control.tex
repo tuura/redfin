@@ -1,7 +1,7 @@
 \section{Symbolic execution in presence of unbounded loops\label{sec-motor-control}}
 
 Many programs targeting REDFIN share the distinctive feature of
-the energy estimation program considered in section~\ref{sec-verification},
+the energy estimation program considered in section~\S\ref{sec-verification},
 i.e. the existence of an  \emph{upper bound on execution time},
 since their termination does not depend on input data.
 However, other programs may have a loop
@@ -128,13 +128,13 @@ program's inputs and the loop's state:
 
 \noindent
 We will verify the loop invariant by using the verification framework in the
-\emph{branching mode}\ref{sec-operation-modes}. While symbolic execution with
-merging, which is implemented by the framework's \emph{mergin} mode, allows
+\emph{branching} mode~\S\ref{sec-transformer}. While symbolic execution with
+merging, which is implemented by the framework's \emph{merging} mode, allows
 for intuitive formulation of properties for whole-program verification and
 is very useful for verifying finite programs, as we have
-reported in the section~\ref{sec-verification}, in presence of branches guarded
-by symbolic values, it suffers from \emph{symbolic non-termination}.
-Thus, for verifying the loop invariant, we rely on traditional symbolic execution.
+reported in the section~\S\ref{sec-verification}, in presence of branches guarded
+by symbolic values it suffers from \emph{symbolic non-termination}.
+Thus, for verifying the loop invariant, we rely on branching symbolic execution.
 
 To verify the loop invariant we take the following approach:
 
