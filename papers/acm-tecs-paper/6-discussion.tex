@@ -63,8 +63,8 @@ the productivity. As a microbenchmark, we verified the correctness of an array
 summation program, reporting the number of SMT clauses and Z3 runtime for
 low-level (LL) and high-level (HL) programs:
 
-\noindent
-{\smaller\begin{tabular}{l||c|c|c|c|c}
+{\centering
+\begin{tabular}{l||c|c|c|c|c}
 \hline
 Benchmark        & Array & Clauses & Clauses & Time    & Time    \\
                  & size  & LL      & HL      & LL      & HL      \\\hline
@@ -80,8 +80,16 @@ Equivalence      & 9     & 258     & 261     & 0.039s  & 0.097s  \\
 to the \hs{sum}  & 12    & 495     & 459     & 0.053s  & 0.647s  \\
 function         & 15    & 708     & 702     & 0.311s  & 7.322s  \\
                  & 18    & 1005    & 990     & 2.633s  & 71.896s \\\hline
-\end{tabular}
+\end{tabular}\par
 }
+
+The example of a stepper motor control program considered in
+section~\S\ref{sec-motor-control} proved challenging to verify. We have been
+able to ensure that a loop invariant representing an important safety property of the
+program holds, but had to restrict the input parameter space; we are working towards
+addressing the performance restrictions of the framework in order to be able to verify
+functional correctness of the motor control program, which involves exploring much
+larger path space than the loop invariant verification condition.
 
 % {\smaller
 % \begin{tabular}{c||c|c|c|c|c}

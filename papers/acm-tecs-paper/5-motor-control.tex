@@ -176,8 +176,15 @@ time a conditional jump is encountered to check if the path conditions of the br
 are satisfiable.
 
 Checking satisfiability of execution path is essential to mitigation the path explosion
-problem. Pre-condition, when available, is assigned as the initial path condition and thus
+problem. Precondition, when available, is assigned as the initial path condition and thus
 will become a subterm of every formula submitted to the solver.
 Identifying correct preconditions is essential for verification since they may
 drastically reduce the number of satisfiable paths in the symbolic execution tree
 of the program that is being verified.
+
+With the branch pruning optimisation in place and the parameters restricted
+to $dist \in \mathopen[1, 200\mathclose]$, $v_{max} \in \mathopen[1, 30\mathclose]$ and
+$a_{max} \in \mathopen[1, 30\mathclose]$ the verification of the loop invariant
+takes around 40 minutes on a conventional workstation\footnote{We use a laptop
+with 2.90GHz Intel Core i5-4300U processor, 8GB RAM (3MB cache),
+and the SMT solver Z3 version 4.5.1 (64-bit).}.
