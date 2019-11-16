@@ -1,13 +1,14 @@
 \section{Introduction}\label{sec-intro}
+
 Software bugs play a major role in the history of spacecraft
-accidents~\cite{Leveson2004}. Some mission-ending bugs, e.g. those due to
-software updates, would have been difficult to prevent, but plain integer
-overflows~\cite{bug-rocket} and incorrect unit
-conversion~\cite{NASA:1999:Mars} should have been eradicated long ago.
-This paper
-combines known formal verification and programming languages techniques and presents
-a formal verification approach for simple control tasks, such as satellite power
-management, which are executed on a real processing core used in space missions.
+accidents~\cite{Leveson2004}. Some of the known mission-ending bugs, e.g. due to
+software updates, would have been difficult to prevent, but integer
+overflows~\cite{bug-rocket} and incorrect unit conversion~\cite{NASA:1999:Mars}
+should have been eradicated long ago.
+This paper combines known formal verification and programming languages
+techniques and presents a formal verification approach for simple control tasks,
+such as satellite power management, which are executed on a real processing core
+used in space missions.
 
 % Alas, there is no silver bullet. Testing is supported by mature methodologies
 % and frameworks, but does not provide the full correctness guarantee. General-purpose
@@ -28,12 +29,11 @@ management, which are executed on a real processing core used in space missions.
 \end{figure}
 
 Fig.~\ref{fig-overview} shows an overview of our approach. The bottom part
-corresponds to conventional code generation and simulation, where
+corresponds to conventional code generation and test, where
 REDFIN\footnote{REDFIN stands for `REDuced instruction set for Fixed-point \&
 INteger arithmetic'. This instruction set and the corresponding processing core
-were developed by (Company Name) for space missions.
-% RUAG Space Austria GmbH
-See~\S\ref{sec-redfin} for more details.} assembly language is executed by
+were developed by RUAG Space Austria GmbH for space missions
+(see~\S\ref{sec-redfin}).} assembly language is executed by
 simulating the effect of each instruction on the state of the processor and memory.
 The corresponding \emph{state transformer} is typically implicit and intertwined
 with the rest of the simulation infrastructure. The main idea of our approach is

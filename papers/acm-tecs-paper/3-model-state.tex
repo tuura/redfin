@@ -1,4 +1,6 @@
 \section{Modelling REDFIN in Haskell\label{sec-transformer}}
+
+
 In this section we formally define the REDFIN microarchitecture and express the
 semantics of the instruction set as an explicit and symbolic state transformer.
 
@@ -13,6 +15,7 @@ data State = State
   , flags               :: Flags
   , clock               :: Clock }
 \end{minted}
+\vspace{0.5mm}
 \begin{minted}[fontsize=\small]{haskell}
 type Register           = SymbolicValue Word2
 type Value              = SymbolicValue Int64
@@ -20,29 +23,31 @@ type RegisterBank       = SymbolicArray Word2 Int64
 type MemoryAddress      = SymbolicValue Word8
 type Memory             = SymbolicArray Word8 Int64
 \end{minted}
+\vspace{0.5mm}
 \begin{minted}[fontsize=\small]{haskell}
 type InstructionAddress = SymbolicValue Word8
 type InstructionCode    = SymbolicValue Word16
 type Program            = SymbolicArray Word8 Word16
 \end{minted}
+\vspace{0.5mm}
 \begin{minted}[fontsize=\small]{haskell}
 data Flag               = Condition@\,@|@\,@Overflow@\,@|@\,@Halt@\,@...
 type Flags              = SymbolicArray Flag Bool
 type Clock              = SymbolicValue Word64
 \end{minted}
+\vspace{-2.5mm}
 \caption{Basic types for modelling REDFIN.\label{fig-types}}
-\Description[Please consult the text of this section for the description]{}
+\vspace{-4.5mm}
 \end{figure}
 
-\subsection{The REDFIN microarchitecture state}
+\subsection{The REDFIN Microarchitecture State}
 
 The main idea of our approach is to use an explicit state transformer
 semantics of the REDFIN microarchitecture. The \hs{State} of the entire
 processing core is a product of states of every component, see
-Fig.~\ref{fig-types}.
-% The names and types of the components are self-explanatory.
-We define \hs{SymbolicValue} and \hs{SymbolicArray} on top of the SBV
-library~\cite{SBV} that we use as the SMT translation and verification frontend.
+Fig.~\ref{fig-types}. We define \hs{SymbolicValue} and \hs{SymbolicArray} on top
+of the SBV library~\cite{SBV} that we use as a frontend for SMT translation and
+verification.
 
 % \begin{equation*}
 % \begin{split}
@@ -78,21 +83,18 @@ There are~4 registers (addressed by \hs{Word2}) and 256 memory cells (addressed
 by \hs{Word8}) that store 64-bit values (\hs{Int64}). The register bank and
 memory are represented by symbolic arrays
 that can be accessed via SBV's functions \hs{readArray} and \hs{writeArray}.
-% \subsubsection{Instructions and programs}
 REDFIN uses 16-bit \hs{InstructionCode}s, whose 6 leading bits contain the
 opcode, and the remaining 10 bits hold instruction arguments. The \hs{Program}
 maps 8-bit instruction addresses to instruction codes.
 
-% \subsubsection{Status flags and clock}
 The microarchitecture status \hs{Flags} support conditional branching, track
 integer overflow, and terminate the program (we omit a few other flags for
 brevity).
-% The flag register is a symbolic map from flags to Boolean values.
 The \hs{Clock} is a 64-bit counter
 incremented on each clock cycle. Status flags and the clock are used for
-diagnostic, formal verification and worst-case execution time analysis.
+diagnostics, formal verification, and worst-case execution time analysis.
 
-\subsection{Instruction and program semantics}
+\subsection{Instruction and Program Semantics}
 
 We can now define the formal semantics of REDFIN instructions and programs as a
 \emph{state transformer} $T : S \rightarrow S$, i.e. a function that maps
@@ -105,7 +107,9 @@ semantics of the single-instruction program $\hs{[}\hs{nop}\hs{]} \in P$.
 % instruction, but one can use the semantically equivalent instruction \hs{jmpi 0}
 % instead (i.e. jump to the next instruction).}
 
+\vspace{-1.5mm}
 \noindent\hrulefill~\\
+\vspace{-3.5mm}
 
 \noindent
 \textbf{Definition (program semantics):} The semantics of a program $p \in P$
@@ -122,8 +126,9 @@ is inductively defined as follows:
     is a composition of (i) fetching the instruction from
     the program memory~$T_\textit{fetch}$, (ii) incrementing the
     instruction counter~$T_\textit{inc}$, and (iii) the state transformer
-    of the instruction itself~$T_{\subhs{i}}$, or, using the order of state
+    of the instruction itself~$T_{\subhs{i}}$; or,~using the order of state
     components from Fig.~\ref{fig-types}:
+    \vspace{-1mm}
     \[
     \begin{array}{lcl}
     T_\textit{fetch} & = & (r, m, ic, ir, p, f, c) \mapsto (r, m, ic, p[ic], p, f, c + 1)\\
@@ -133,13 +138,17 @@ is inductively defined as follows:
     \]
 
     % \item
+    % \vspace{-1mm}
+    \noindent
     The semantics of a \emph{composite program} $\hs{i}\hs{:}\hs{p} \in P$,
     where the operator~\hs{:}~prepends an instruction $\hs{i} \in I$ to a program
     $\hs{p} \in P$, is defined as $T_{\subhs{i}\subhs{:}\subhs{p}} = T_{\hs{p}} \circ T_{\subhs{[}\subhs{i}\subhs{]}}$.
 
 % \end{itemize}
 
+\vspace{-1mm}
 \noindent\hrulefill~\\
+\vspace{-3mm}
 
 % \noindent
 We represent state transformers in Haskell using the \emph{state monad}, a
@@ -149,131 +158,127 @@ define it as follows:
 % \footnote{A generic version of this monad is available in standard module
 % \hs{Control.Monad.State}.}
 
-\begin{minted}[xleftmargin=10pt]{haskell}
+\vspace{0.5mm}
+\begin{minted}[fontsize=\small]{haskell}
 data Redfin a = Redfin
-  { transform :: State -> (a, State) }
+     { transform :: State -> (a, State) }
 \end{minted}
+\vspace{0.5mm}
 
 \noindent
-Every computation with the return type~\hs{Redfin}~\hs{a} yields a value of type~\hs{a}
-and possibly alters the \hs{State} of the REDFIN microarchitecture. As an example,
-below we express the state transformer $T_\textit{inc}$ using the \hs{Redfin} monad.
+A computation of type~\hs{Redfin}~\hs{a} yields a value of type~\hs{a}~and
+possibly alters the \hs{State} of the REDFIN microarchitecture.
+The type \hs{Redfin}~\hs{()} describes a computation that does not produce any
+value as part of the state transformation; such computations directly correspond
+to state transformers.
 
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+\noindent
+For example, here is the state transformer $T_\textit{inc}$:
+
+\begin{minted}[fontsize=\small]{haskell}
 incrementInstructionCounter :: Redfin ()
 incrementInstructionCounter =
     Redfin $ \current -> ((), next)
-  where next = current { instructionCounter =
-          instructionCounter current + 1 }
+  where
+    next = current { instructionCounter =
+        instructionCounter current + 1 }
 \end{minted}
 
 \noindent
 In words, the state transformer looks up the value of the \hs{instructionCounter}
 in the \hs{current} state and replaces it in the \hs{next} state with the
-incremented~value. Such computations directly correspond to REDFIN programs and
-can be described using Haskell's powerful \hs{do}-notation:
+incremented value. We can compose such primitive computations into more complex
+state transformers using Haskell's \hs{do}-notation:
 
-% The type \hs{Redfin}~\hs{()} indicates that the computation does not
-% produce any value as part of the state transformation.
-
-% and can be composed using the operator \hs{>>}.
-% For example, \hs{fetchInstruction}\\\hs{>>}~\hs{incrementInstructionCounter} is
-% the state transformer $T_\textit{inc} \circ T_\textit{fetch}$ assuming that
-% \hs{fetchInstruction} corresponds to $T_\textit{fetch}$. We can also use
-
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
-readInstructionRegister@\,@::@\,@Redfin@\,@InstructionCode
+\begin{minted}[fontsize=\small]{haskell}
+readInstructionRegister :: Redfin InstructionCode
 readInstructionRegister =
-  Redfin $ \s -> (instructionRegister s, s)
+    Redfin $ \s -> (instructionRegister s, s)
 \end{minted}
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+
+\begin{minted}[fontsize=\small]{haskell}
 executeInstruction :: Redfin ()
 executeInstruction = do
-  fetchInstruction
-  incrementInstructionCounter
-  instructionCode <- readInstructionRegister
-  decodeAndExecute instructionCode
+    fetchInstruction
+    incrementInstructionCounter
+    instructionCode <- readInstructionRegister
+    decodeAndExecute instructionCode
 \end{minted}
 
 \noindent
 Here \hs{readInstructionRegister} reads the instruction code from the current
-state \emph{without modifying it}. This function is used in \hs{executeInstruction},
+state \emph{without modifying it}, and is subsequently used in \hs{executeInstruction},
 which defines the semantics of the REDFIN execution cycle. We omit definitions of
 \hs{fetchInstruction} and \hs{decodeAndExecute} for brevity. The latter is a
 case analysis of 47 opcodes that returns the matching instruction. We discuss
 several instructions below.
 
-% \subsubsection{Halting the processor}
+\subsubsection{Halting the Processor}
 The instruction~\hs{halt} sets the flag~\hs{Halt}, thereby stopping the
 execution of the current subroutine until a new one is started by a higher-level
 system controller that resets \hs{Halt}.
 
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+\begin{minted}[fontsize=\small]{haskell}
 halt :: Redfin ()
 halt = writeFlag Halt true
 \end{minted}
 
 \noindent
-The auxiliary functions \hs{writeFlag}, \hs{readRegister} etc. are simple
-state transformers manipulating parts of the \hs{State}.
+The auxiliary function \hs{writeFlag} modifies the flag:
 
-% \begin{minted}{haskell}
-% writeFlag :: Flag -> SymbolicValue Bool -> Redfin ()
-% writeFlag flag value = Redfin $ \s -> ((), s')
-%   where s' = s { flags = writeArray (flags s)
-%                          (flagId flag) value }
-% \end{minted}
+\begin{minted}[fontsize=\small]{haskell}
+writeFlag :: Flag -> SymbolicValue Bool -> Redfin ()
+writeFlag flag value = Redfin $ \s -> ((), s')
+  where
+    s' = s { flags =
+        writeArray (flags s) (flagId flag) value }
+\end{minted}
 
-% \subsubsection{Arithmetics}
+\noindent
+In the rest of the paper we will use auxiliary functions \hs{readRegister},
+\hs{writeRegister}, \hs{readState}, etc.; they are simple state transformers
+defined similarly to \hs{writeFlag}.
+
+\subsubsection{Arithmetics}
 The instruction \hs{abs} is more involved:
 it reads a register and writes back the absolute value of its contents.
 The semantics accounts for the potential integer overflow that leads to the
 \emph{negative resulting value} when the input is $-2^{63}$ (REDFIN uses the
 common two's complement signed number representation). The overflow is flagged
-by setting~\hs{Overflow}.
-% \footnote{We use \hs{Prelude.abs} to distinguish between the instruction
-% and the function from the standard library \hs{Prelude}; \hs{fmap} applies
-% \hs{Prelude.abs} to the result of \hs{readRegister}.}
+by setting~\hs{Overflow}. We use SBV's symbolic \emph{if-then-else}
+operation~\hs{ite} to \emph{merge} two symbolic values~---~in this case two
+possible next states, one of which is a state with the \hs{Overflow} flag set:
 
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+\begin{minted}[fontsize=\small]{haskell}
 abs :: Register -> Redfin ()
-abs rX = do
+abs reg = do
     state  <- readState
-    result <- fmap Prelude.abs (readRegister rX)
+    result <- fmap Prelude.abs (readRegister reg)
     let (_, state') =
       transform (writeFlag Overflow true) state
     writeState $ ite (result .< 0) state' state
-    writeRegister rX result
+    writeRegister reg result
 \end{minted}
 
-\noindent
-SBV's symbolic \emph{if-then-else} operation~\hs{ite} \emph{merges} two possible
-next states, one of which has the \hs{Overflow} flag set.
+\subsubsection{Conditional Branching}
+As an example of a control flow instruction consider \hs{jmpi_ct}, which
+tests the~\hs{Condition} flag, and adds the provided \hs{offset} to the
+instruction counter if the flag is set.
 
-% The
-% auxiliary functions \hs{readRegister}, \hs{writeRegister}, \hs{readState} and
-% \hs{writeState} are simple state transformers like
-% \hs{readInstructionRegister} and \hs{writeFlag}.
-
-% \subsubsection{Conditional branching}
-As an example of a control flow REDFIN instruction consider \hs{jmpi_ct}, which
-tests the~\hs{Condition} flag, and adds the provided offset to the instruction
-counter if the flag is set.
-
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+\begin{minted}[fontsize=\small]{haskell}
 jmpi_ct :: SymbolicValue Int8 -> Redfin ()
 jmpi_ct offset = do
-  ic <- readInstructionCounter
-  condition <- readFlag Condition
-  let ic' = ite condition (ic + offset) ic
-  writeInstructionCounter ic'
+    ic <- readInstructionCounter
+    condition <- readFlag Condition
+    let ic' = ite condition (ic + offset) ic
+    writeInstructionCounter ic'
 \end{minted}
 
 \noindent
 % After working through the above examples, it is worth noting that
 We use our Haskell encoding of the state transformer as a~\emph{metalanguage}:
 we operate the REDFIN core as a puppet master, using external meta-notions of
-addition, comparison and let"/binding. From the processor's
+addition, comparison and let-binding. From the processor's
 point of view, we have infinite memory and act instantly, which gives us unlimited
 modelling power. For example, we can simulate the processor environment
 in an external tool and feed its result to \hs{writeRegister} as if it was
@@ -294,7 +299,7 @@ unbounded loops whose termination depend on dynamic input data. We approach
 verification of the former using~\emph{symbolic execution with merging} that
 allows for whole-program verification by translating the program and the
 verification condition into a single SMT formula. However, unconditional merging
-does not work is well\todo{~\cite{reference}} for non-terminating programs; thus
+does not work for non-terminating programs; thus
 we employ the traditional approach to symbolic execution that generates from programs
 the tree-shaped traces which could be split into separate execution paths for path-by-path
 analysis and verification. The verification framework thus works in two
@@ -302,7 +307,7 @@ modes:~\emph{merging} and~\emph{branching}. See section~\ref{sec-verification} f
 a verification example using the merging mode and section~\ref{sec-motor-control} for
 an approach to verify a non-terminating program in branching mode.
 
-\subsubsection{Merging mode}
+\subsubsection{Merging Mode}
 
 The function \hs{simulate} takes a number of simulation
 steps~$N$ and an initial symbolic \hs{State} as input, and executes
@@ -311,10 +316,12 @@ merge two possible futures: (i) if the \hs{Halt} flag is set, we continue the
 simulation from the \hs{next} state, (ii) otherwise we remain in the current
 \hs{state}, since in this case the processor must remain idle.
 
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
+\begin{minted}[fontsize=\small]{haskell}
 simulate :: Int -> State -> State
-simulate steps s | steps <= 0 = s
-                 | otherwise  = ite halted s (simulate (steps - 1) next)
+simulate steps s
+  if steps <= 0
+  then s
+  else ite halted s (simulate (steps - 1) next)
  where halted = readArray (flags s) (flagId Halt)
        next   = snd (transform executeInstruction s)
 \end{minted}
@@ -323,25 +330,29 @@ The function~\hs{ite} here performs symbolic merging of two possible states:
 where the halted flag is set and not. The underlying semantics of instructions
 will also perform merging on encounter of every branching instruction.
 
-\subsubsection{Branching mode}
+\subsubsection{Branching Mode}
 
 In branching mode, on the contrary, we do not perform any merging at all and generate a
-tree-shaped symbolic execution trace with path constraints attached to the states storing
-program states. We take advantage of the fact that the semantics of the~\hs{halt}
+rose tree\footnote{As defined in~\hs{Data.Tree} module of Haskell's~\texttt{containers} package}-shaped
+symbolic execution trace where every node stores an integer identifier, a program state and its
+associated path constraints.
+We take advantage of the fact that the semantics of the~\hs{halt}
 instruction updates the~\hs{Halt} flag with concrete boolean value~\hs{True} and thus we
 can use the native Haskell conditional operator to check if the current execution path
-has terminated and return a leaf node. Otherwise, we generate~\hs{children} -- a list of successor states, recursively calling the~\hs{simulate} function with every child as the initial state and attaching the results as leaves to the current node.
+has terminated and return a leaf node in this case. Otherwise, we generate~\hs{children} --- a list of
+successor states, recursively calling the~\hs{simulate} function with every child as the initial state
+and attaching the results as leaves to the current node.
 
-\begin{minted}[xleftmargin=10pt,fontsize=\small]{haskell}
-simulate :: Int -> State -> Trace State
+\begin{minted}[fontsize=\small]{haskell}
+simulate :: Int -> State -> Tree (Node Int State)
 simulate steps s = getTrace $ do
     modify (+ 1)
     n <- get
     let halted = readArray (flags s) (flagId Halt)
-    if | steps <= 0 || halted -> pure (mkTrace (Node n s) [])
-       | otherwise -> do
-           children <- traverse (simulate (steps - 1)) (executeInstruction s)
-           pure $ mkTrace (Node n s) children
+    if steps <= 0 || halted
+    then pure (mkTrace (Node n s) [])
+    else do children <- traverse (simulate (steps - 1)) (executeInstruction s)
+            pure $ mkTrace (Node n s) children
 \end{minted}
 
 Symbolic simulation is very powerful. It allows us to formally verify properties

@@ -1,4 +1,4 @@
-\section{The REDFIN architecture overview\label{sec-redfin}}
+\section{The REDFIN Architecture Overview\label{sec-redfin}}
 % For many spacecraft subsystems integrated circuits are required to perform control
 % tasks or simple data processing. Typically, these integrated circuits are realised
 % with FPGAs (Field Programmable Gate Arrays) due to their flexibility and lower
@@ -22,7 +22,7 @@ following goals: (i)~simple instruction set with a small hardware footprint,
 (ii)~reduced complexity to support formal verification of programs, and
 (iii)~deterministic real-time behaviour.
 
-\subsection{REDFIN instruction set and microarchitecture}
+\subsection{REDFIN instruction Set and Microarchitecture}
 
 REDFIN instructions have a fixed width of 16 bits.
 The instruction set is based on a register-memory architecture, i.e.
@@ -51,15 +51,17 @@ eliminates the need to implement caches and thus removes a source of non-determi
 conventional processors. High performance is not one of the main goals, hence the
 core is not pipelined and does not need to resolve data/control hazards or
 perform any form of speculative execution. These properties greatly simplify
-worst case execution time analysis.
+worst-case execution time analysis.
 
-\subsection{Requirements for formal verification}
+\subsection{Requirements for Formal Verification}
 
 Verification of \emph{functional correctness} of REDFIN programs, as defined by a
 requirement specification, clearly is an essential task for the development of space
 electronics. There are also important \emph{non-functional requirements}, such as
-worst case execution time and energy consumption, which rely on the implementation
-guarantees provided by the processing core. To reduce verification complexity,
+worst-case execution time and energy consumption, which rely on the implementation
+guarantees provided by the processing core.
+
+To reduce verification complexity,
 the REDFIN core only allows to execute a single subroutine whose execution is triggered
 by a higher-level controller in the system. The implementation guarantees that
 concurrent bus accesses to the processor registers or memory do not affect

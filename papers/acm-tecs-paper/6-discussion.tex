@@ -52,9 +52,10 @@ symbolic values, reusing the same code base and infrastructure for testing and
 formal verification.
 Testing yields trivial SMT problems that can be solved in sub-second time.
 Formal verification is more expensive: in our experiments,
-programs of realistic sizes (typical REDFIN programs have hundreds of
-instructions) required 10-15 minutes, but one can
-easily construct tiny programs that will grind any SMT solver to a halt:
+realistic programs (e.g. for controlling a stepper motor in antenna and solar
+panel positioning units, with a loop and 85 instructions)
+required 40 minutes, but one
+can easily construct tiny programs that will grind any SMT solver to a halt:
 for example, analysis of a single multiplication instruction can take half an
 hour if it is required to factor 64-bit numbers --- try to factor
 4611686585363088391 with an SMT solver! In such cases, conservatively proving
@@ -83,6 +84,7 @@ function         & 15    & 708     & 702     & 0.311s  & 7.322s  \\
 \end{tabular}\par
 }
 
+\noindent
 The example of a stepper motor control program considered in
 section~\S\ref{sec-motor-control} proved challenging to verify. We have been
 able to ensure that a loop invariant representing an important safety property of the

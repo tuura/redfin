@@ -12,7 +12,7 @@ metalanguage} -- an idea with a long history.
 set architecture in HOL4 and give a careful account to bit-accurate proofs of
 the instruction decoder correctness. Later, \citet{kennedy2013coq}
 formalised a subset of the x86 architecture in Coq, using monads for instruction
-execution semantics and \textsf{do}-notation for assembly language embedding.
+execution semantics, and \textsf{do}-notation for assembly language embedding.
 % Both these models are formalised in proof assistants, thus are powered by full
 % dependent types, which allow the usage of mechanised program correctness proofs.
 \citet{degenbaev2012formal} formally specified the \emph{complete} x86
@@ -21,7 +21,7 @@ language that can be translated to a formal proof system. Arm's Architecture
 Specification Language (ASL) has been developed for the same purpose to formalise the
 Arm v8 instruction set~\cite{reid2016cav}. The SAIL language~\cite{SAIL-lang} has
 been designed as a generic language for ISA specification and was used to
-specify the semantics of ARMv8-a, RISC-v, and CHERI-MIPS.
+specify the semantics of ARMv8-A, \mbox{RISC-V}, and \mbox{CHERI-MIPS}.
 Our specification approach is similar to these three works, but we operate on a
 much smaller scale of the REDFIN core and focus on verifying whole programs.
 
@@ -51,6 +51,11 @@ specifications written in a subset of Haskell.
 
 Finally, we would like to acknowledge the projects and talks
 that provided an initial inspiration for this work: the `Monads to Machine
-Code' compiler by \citet{diehl-monads-to-machines}, RISC-V semantics
+Code' compiler by \citet{diehl-monads-to-machines}, \mbox{RISC-V} semantics
 by~\citet{riscv-semantics}, the assembly monad by~\citet{asm-monad}, and
 SMT-based program analysis by \citet{haskell-z3}.
+
+\section*{Acknowledgements}
+We would like to thank Vitaly Bragilevsky, Georgi Lyubenov, Neil Mitchell, Charles Morisset,
+Artem Pelenitsyn, Danil Sokolov, as well as the three Haskell Symposium
+reviewers for their helpful feedback on an earlier version of this paper.
