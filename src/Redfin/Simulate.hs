@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Simulate
--- Copyright   :  (c) Andrey Mokhov 2017
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2017-2020
 --
--- Maintainer  :  andrey.mokhov@gmail.com
+-- Maintainer  :  mail@geo2a.info
 -- Stability   :  experimental
 --
 -- Simulating REDFIN programs.
@@ -11,10 +11,10 @@
 -----------------------------------------------------------------------------
 module Redfin.Simulate (simulate) where
 
-import Data.SBV
+import           Data.SBV
 
-import Redfin
-import Redfin.Decode
+import           Redfin
+import           Redfin.Decode
 
 simulate :: Int -> State -> State
 simulate steps state

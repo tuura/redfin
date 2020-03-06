@@ -1,53 +1,48 @@
 module Redfin.Examples.Common where
 
-import Data.Maybe (fromJust)
-import Data.SBV
-import Redfin
-import Redfin.Assembly
+import           Data.SBV
+import           Redfin
+import           Redfin.Assembly
 
 r0, r1, r2, r3 :: Register
 [r0, r1, r2, r3] = [0 .. 3]
 
-emptyRegisters :: RegisterBank
-emptyRegisters = mkSFunArray $ const 0
+-- initArray :: (SymArray array, Monoid b) => [(a, b)] -> Symbolic (array a b)
+-- initArray inits = do
+--     blanks <- newArray "" (Just . literal mempty)
+--     pure $ foldr (\(k, v) arr -> writeArray arr k v) blanks
 
-emptyFlags :: Flags
-emptyFlags = mkSFunArray $ const false
+mkRegisters :: String -> [(Register, Value)] -> Symbolic RegisterBank
+mkRegisters name inits = do
+    blanks <- newArray name (Just . literal $ 0)
+    pure $ foldr (\(k, v) arr -> writeArray arr k v) blanks inits
 
-initialiseMemory :: [(MemoryAddress, Value)] -> Memory
-initialiseMemory =
-    foldr (\(a, v) m -> writeArray m a v) (mkSFunArray $ const 0)
+mkFlags :: String -> [(Flag, Bool)] -> Symbolic Flags
+mkFlags name inits = do
+    blanks <- newArray name (Just sFalse)
+    pure $ foldr (\(k, v) arr -> writeArray arr (flagId k) (literal v)) blanks inits
 
--- | Dump the address fron the list 'addrs'
-dumpMemory :: [Word8] -> Memory -> [(Word8, Int64)]
-dumpMemory addrs m =
-    zip addrs $
-    map (fromJust . unliteral) $
-    map (readArray m) (map literal addrs)
+mkMemory :: String -> [(MemoryAddress, Value)] -> Symbolic Memory
+mkMemory name inits = do
+    blanks <- newArray name (Just . literal $ 0)
+    pure $ foldr (\(k, v) arr -> writeArray arr k v) blanks inits
 
-dumpRegisters :: RegisterBank -> [(Word8, Int64)]
-dumpRegisters regs =
-    zip [0, 1, 2, 3]  $
-    map (fromJust . unliteral) $
-    map (readArray regs) [r0, r1, r2, r3]
+dumpMemory :: Word8 -> Word8 -> Memory -> [(Int, Value)]
+dumpMemory from to m = filter ((/=0) . snd) $ zip [0 ..] $ map
+    (readArray m)
+    [literal from .. literal to]
 
-dumpFlags :: Flags -> [(Flag, Bool)]
-dumpFlags regs =
-    let fs = [Halt, Overflow, Condition] in
-    zip fs  $
-    map (fromJust . unliteral) $
-    map (readArray regs) (map flagId fs)
-
-boot :: Script -> Memory -> State
-boot src mem = State
-    { registers           = emptyRegisters
-    , instructionCounter  = 0
-    , instructionRegister = 0
-    , program             = assemble src
-    , flags               = emptyFlags
-    , memory              = mem
-    , clock               = 0
-    }
+boot :: Program -> RegisterBank -> Memory -> Flags -> State
+boot prog regs mem flags =
+    State
+        { registers           = regs
+        , instructionCounter  = 0
+        , instructionRegister = 0
+        , program             = prog
+        , flags               = flags
+        , memory              = mem
+        , clock               = 0
+        }
 
 prover :: SMTConfig
 prover = z3 { verbose = True

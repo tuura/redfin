@@ -1,10 +1,10 @@
 {-# LANGUAGE DeriveFunctor #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Redfin.Verification
--- Copyright   :  (c) Andrey Mokhov 2017
+-- Module      :  Redfin
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2017-2020
 --
--- Maintainer  :  andrey.mokhov@gmail.com
+-- Maintainer  :  mail@geo2a.info
 -- Stability   :  experimental
 --
 -- REDFIN sequencer (verification backend).
@@ -218,7 +218,7 @@ writeMemory address value = do
 toMemoryAddress :: Value -> Redfin SWord8
 toMemoryAddress value = do
     let valid = value .< 256
-    transformState $ \s -> ite valid s (snd $ redfin (writeFlag OutOfMemory true) s)
+    transformState $ \s -> ite valid s (snd $ redfin (writeFlag OutOfMemory sTrue) s)
     return $ fromBitsLE (take 8 $ blastLE value)
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned

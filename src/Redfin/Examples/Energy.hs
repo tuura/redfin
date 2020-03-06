@@ -1,19 +1,25 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Redfin.Examples.Energy where
+-- (
+--         energyEstimate, energyEstimateHighLevel, energyEstimateLowLevel,
+--         equivalence, highLevelFaultyExample, highLevelCorrect,
+--         simulateHighLevel
+--     ) where
 
-import Prelude hiding (read)
-import Text.Pretty.Simple (pPrint)
-import Data.SBV hiding ((%), (#))
-import Redfin
-import Redfin.Assembly hiding (div, abs)
-import Redfin.Listing
-import qualified Redfin.Assembly as Assembly
-import Redfin.Simulate
-import Redfin.Data.Fixed
-import Redfin.Language.Expression
-import Redfin.Examples.Common
-import Redfin.Examples.Energy.Units
+import           Control.Monad.IO.Class       (liftIO)
+import           Data.SBV                     hiding (( # ), (%))
+import           Prelude                      hiding (read)
+import           Redfin
+import           Redfin.Assembly              hiding (abs, div)
+import qualified Redfin.Assembly              as Assembly
+import           Redfin.Data.Fixed
+import           Redfin.Examples.Common
+import           Redfin.Examples.Energy.Units
+import           Redfin.Language.Expression
+import           Redfin.Listing
+import           Redfin.Simulate
+import           Text.Pretty.Simple           (pPrint)
 
 energyEstimate :: Integral a => a -> a -> a -> a -> a
 energyEstimate t1 t2 p1 p2 = abs (t1 - t2) * (p1 + p2) `div` 2
@@ -46,14 +52,14 @@ energyEstimateHighLevelFP = do
 energyEstimateLowLevel :: Script
 energyEstimateLowLevel = do
     let { t1 = 0; t2 = 1; p1 = 2; p2 = 3 }
-    ld r0 t1
-    sub r0 t2
-    Assembly.abs r0
-    ld r1 p1
-    add r1 p2
-    st r1 p2
-    mul r0 p2
-    sra_i r0 1
+    -- ld r0 t1
+    -- sub r0 t2
+    -- Assembly.abs r0
+    -- ld r1 p1
+    -- add r1 p2
+    -- st r1 p2
+    -- mul r0 p2
+    -- sra_i r0 1
     halt
 
 equivalence :: Symbolic SBool
@@ -62,107 +68,106 @@ equivalence = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-        steps = 100
-        finalStateLL = simulate steps $ boot energyEstimateLowLevel mem
-        finalStateHL = simulate steps $ boot energyEstimateHighLevel mem
-        resultLL = readArray (registers finalStateLL) 0
+    constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
+    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+    let steps = 100
+    emptyRegs <- mkRegisters "registers" []
+    emptyFlags <- mkFlags "flags" []
+    let progLowLevel = assemble energyEstimateLowLevel
+        progHighLevel = assemble energyEstimateHighLevel
+    let finalStateLL = simulate steps $ boot progLowLevel emptyRegs mem emptyFlags
+        finalStateHL = simulate steps $ boot progHighLevel emptyRegs mem emptyFlags
+    let resultLL = readArray (registers finalStateLL) 0
         resultHL = readArray (registers finalStateHL) 0
-        overflow = readArray (flags finalStateLL) (flagId Overflow)
-    pure $ resultLL .== resultHL
-         &&& bnot overflow
+    pure $ resultLL .== resultLL
 
-
-equivHaskell :: Script -> Symbolic SBool
-equivHaskell src = do
-    t1 <- forall "t1"
-    t2 <- forall "t2"
-    p1 <- forall "p1"
-    p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-        steps = 100
-        finalState = simulate steps $ boot src mem
-        result = readArray (registers finalState) 0
-    pure $ result .== energyEstimate t1 t2 p1 p2
-
-faultyExample :: Script -> Symbolic SBool
-faultyExample src = do
+highLevelFaultyExample :: Symbolic SBool
+highLevelFaultyExample = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
     constrain $ p1 .>= 0
     constrain $ p2 .>= 0
-    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-        steps = 100
-        finalState = simulate steps $ boot src mem
-        result = readArray (registers finalState) 0
-        overflow = readArray (flags finalState) (flagId Overflow)
-    pure $   bnot overflow
-         &&& result .>= 0
 
-correct :: Script -> Symbolic SBool
-correct src = do
-    t1 <- forall "t1"
-    t2 <- forall "t2"
-    p1 <- forall "p1"
-    p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-        steps = 100
-        finalState = simulate steps $ boot src mem
-        result = readArray (registers finalState) 0
-        overflow = readArray (flags finalState) (flagId Overflow)
-    pure $   bnot overflow
-         &&& result .>= 0
+    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
 
-lowLevelCorrect :: Symbolic SBool
-lowLevelCorrect = do
-    t1 <- forall "t1"
-    t2 <- forall "t2"
-    p1 <- forall "p1"
-    p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-        steps = 100
-        finalState = simulate steps $ boot energyEstimateLowLevel mem
+    let steps = 100
+    emptyRegs <- mkRegisters "registers" []
+    emptyFlags <- mkFlags "flags" []
+    let progHighLevel = assemble energyEstimateHighLevel
+    let finalState = simulate steps $ boot progHighLevel emptyRegs mem emptyFlags
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
-    pure $   bnot overflow
-         &&& result .>= 0
+    pure $   sNot overflow
+         .&& result .>= 0
 
-highLevelCorrectFP :: Symbolic SBool
-highLevelCorrectFP = do
-    t1 <- forall "t1"
-    t2 <- forall "t2"
-    p1 <- forall "p1"
-    p2 <- forall "p2"
-    constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-        steps = 100
-        finalState = simulate steps $ boot energyEstimateHighLevel mem
-        result = readArray (registers finalState) 0
-        overflow = readArray (flags finalState) (flagId Overflow)
-    pure $
-        -- bnot overflow &&&
-        (Fixed $ result) .>= 0
+-- highLevelCorrect :: Symbolic SBool
+-- highLevelCorrect = do
+--     t1 <- forall "t1"
+--     t2 <- forall "t2"
+--     p1 <- forall "p1"
+--     p2 <- forall "p2"
+--     constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
+--     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
+--     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
+--     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
+--     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+--         steps = 100
+--         finalState = simulate steps $ boot energyEstimateHighLevel mem
+--         result = readArray (registers finalState) 0
+--         overflow = readArray (flags finalState) (flagId Overflow)
+--     pure $   bnot overflow
+--          .&& result .>= 0
+
+
+-- highLevelCorrectFP :: Symbolic SBool
+-- highLevelCorrectFP = do
+--     t1 <- forall "t1"
+--     t2 <- forall "t2"
+--     p1 <- forall "p1"
+--     p2 <- forall "p2"
+--     constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
+--     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
+--     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
+--     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
+--     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+--         steps = 100
+--         finalState = simulate steps $ boot energyEstimateHighLevel mem
+--         result = readArray (registers finalState) 0
+--         overflow = readArray (flags finalState) (flagId Overflow)
+--     pure $
+--         -- bnot overflow .&&
+--         (Fixed $ result) .>= 0
+
+-- simulateHighLevel :: IO ()
+-- simulateHighLevel = do
+--     let mem = initialiseMemory [ (0, 10)
+--                                , (1, 5)
+--                                , (2, 3)
+--                                , (3, 5), (5, 100)]
+--         finalState = simulate 100 $ boot energyEstimateHighLevel mem
+--         memoryDump = dumpMemory 0 255 $ memory finalState
+--     putStr "Memory Dump: "
+--     pPrint memoryDump
+--     putStrLn $ "Estimated energy: " ++ show (readArray (registers finalState) 0)
+--     putStrLn $ "Clock: " ++ show (clock finalState)
+
+-- simulateHighLevelFP :: IO ()
+-- simulateHighLevelFP = do
+--     let mem = initialiseMemory [ (0, (getFixed . toFixed) 10)
+--                                , (1, (getFixed . toFixed) 5)
+--                                , (2, (getFixed . toFixed) 3)
+--                                , (3, (getFixed . toFixed) 5), (5, 100)]
+--         finalState = simulate 100 $ boot energyEstimateHighLevelFP mem
+--         memoryDump = dumpMemory 0 255 $ memory finalState
+--     putStr "Memory Dump: "
+--     pPrint memoryDump
+--     putStrLn $ "Estimated energy: " ++ show (Fixed $ readArray (registers finalState) 0)
+--     putStrLn $ "Clock: " ++ show (clock finalState)
 
 -- An alternative to defining these orphan instances is to switch to SBV's type
 -- class SDivisible instead. Even better is to fix Haskell's class hierarchy.

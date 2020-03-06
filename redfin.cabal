@@ -38,9 +38,9 @@ library
                         containers >= 0.5.7,
                         mtl,
                         extra,
-                        sbv,
+                        sbv >= 7.10,
                         pretty-simple,
-                        units,
+                        units >= 2.4.1.1,
                         units-defs,
                         QuickCheck,
                         text

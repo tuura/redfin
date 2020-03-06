@@ -2,9 +2,9 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Semantics
--- Copyright   :  (c) Andrey Mokhov 2017
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2017-2020
 --
--- Maintainer  :  andrey.mokhov@gmail.com
+-- Maintainer  :  mail@geo2a.info
 -- Stability   :  experimental
 --
 -- Semantics of REDFIN instructions.
@@ -34,15 +34,15 @@ module Redfin.Semantics (
     wait, halt
     ) where
 
-import Control.Monad.Extra
-import qualified Data.Bits as Std
-import Data.Bits hiding (xor)
-import Prelude hiding (div, not, abs)
-import qualified Prelude (abs)
-import Data.SBV
+import           Control.Monad.Extra
+import           Data.Bits           hiding (xor)
+import qualified Data.Bits           as Std
+import           Data.SBV
+import           Prelude             hiding (abs, div, not)
+import qualified Prelude             (abs)
 
-import Redfin
-import Redfin.Data.Fixed
+import           Redfin
+import           Redfin.Data.Fixed
 
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
@@ -55,7 +55,7 @@ import Redfin.Data.Fixed
     res $ x `op` y
 
 pad :: Int -> [SBool]
-pad k = replicate k false
+pad k = replicate k sFalse
 
 fromSImm8 :: SImm8 -> Value
 fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
@@ -75,9 +75,9 @@ add rX dmemaddr = do
     state <- readState
     arg1 <- readRegister rX
     arg2 <- readMemory dmemaddr
-    let overflow = arg2 .> 0 &&& arg1 .> (maxBound @Value - arg2) |||
-                   arg2 .< 0 &&& arg1 .< (minBound @Value - arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg2 .> 0 .&& arg1 .> (maxBound @Value - arg2) .||
+                   arg2 .< 0 .&& arg1 .< (minBound @Value - arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 + arg2)
 
@@ -87,9 +87,9 @@ add_si rX simm = do
     state <- readState
     arg1 <- readRegister rX
     arg2 <- pure $ fromSImm8 simm
-    let overflow = arg2 .> 0 &&& arg1 .> (maxBound @Value - arg2) |||
-                   arg2 .< 0 &&& arg1 .< (minBound @Value - arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg2 .> 0 .&& arg1 .> (maxBound @Value - arg2) .||
+                   arg2 .< 0 .&& arg1 .< (minBound @Value - arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 + arg2)
 
@@ -99,9 +99,9 @@ sub rX dmemaddr = do
     state <- readState
     arg1 <- readRegister rX
     arg2 <- readMemory dmemaddr
-    let overflow = arg2 .> 0 &&& arg1 .< (minBound @Value + arg2) |||
-                   arg2 .< 0 &&& arg1 .> (maxBound @Value + arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg2 .> 0 .&& arg1 .< (minBound @Value + arg2) .||
+                   arg2 .< 0 .&& arg1 .> (maxBound @Value + arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 - arg2)
 
@@ -111,9 +111,9 @@ sub_si rX simm = do --writeRegister rX <~~ (readRegister rX, (-), )
     state <- readState
     arg1 <- readRegister rX
     arg2 <- pure $ fromSImm8 simm
-    let overflow = arg2 .> 0 &&& arg1 .< (minBound @Value + arg2) |||
-                   arg2 .< 0 &&& arg1 .> (maxBound @Value + arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg2 .> 0 .&& arg1 .< (minBound @Value + arg2) .||
+                   arg2 .< 0 .&& arg1 .> (maxBound @Value + arg2)
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 - arg2)
 
@@ -123,12 +123,12 @@ mul rX dmemaddr = do -- writeRegister rX <~~ (readRegister rX, (*), readMemory d
     state <- readState
     arg1 <- readRegister rX
     arg2 <- readMemory dmemaddr
-    let overflow = arg1 .>  0 &&& arg2 .>  0 &&& arg1 .> sDiv (maxBound @Value) arg2
-               ||| arg1 .>  0 &&& arg2 .<= 0 &&& arg2 .< sDiv (minBound @Value) arg1
-               ||| arg1 .<= 0 &&& arg2 .>  0 &&& arg1 .< sDiv (minBound @Value) arg2
-               ||| arg1 .<= 0 &&& arg2 .<= 0 &&& arg1 ./= 0
-                                             &&& arg2 .< sDiv (maxBound @Value) arg1
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg1 .>  0 .&& arg2 .>  0 .&& arg1 .> sDiv (maxBound @Value) arg2
+               .|| arg1 .>  0 .&& arg2 .<= 0 .&& arg2 .< sDiv (minBound @Value) arg1
+               .|| arg1 .<= 0 .&& arg2 .>  0 .&& arg1 .< sDiv (minBound @Value) arg2
+               .|| arg1 .<= 0 .&& arg2 .<= 0 .&& arg1 ./= 0
+                                             .&& arg2 .< sDiv (maxBound @Value) arg1
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 * arg2)
 
@@ -138,12 +138,12 @@ mul_si rX simm = do
     state <- readState
     arg1 <- readRegister rX
     arg2 <- pure $ fromSImm8 simm
-    let overflow = arg1 .>  0 &&& arg2 .>  0 &&& arg1 .> sDiv (maxBound @Value) arg2
-               ||| arg1 .>  0 &&& arg2 .<= 0 &&& arg2 .< sDiv (minBound @Value) arg1
-               ||| arg1 .<= 0 &&& arg2 .>  0 &&& arg1 .< sDiv (minBound @Value) arg2
-               ||| arg1 .<= 0 &&& arg2 .<= 0 &&& arg1 ./= 0
-                                             &&& arg2 .< sDiv (maxBound @Value) arg1
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg1 .>  0 .&& arg2 .>  0 .&& arg1 .> sDiv (maxBound @Value) arg2
+               .|| arg1 .>  0 .&& arg2 .<= 0 .&& arg2 .< sDiv (minBound @Value) arg1
+               .|| arg1 .<= 0 .&& arg2 .>  0 .&& arg1 .< sDiv (minBound @Value) arg2
+               .|| arg1 .<= 0 .&& arg2 .<= 0 .&& arg1 ./= 0
+                                             .&& arg2 .< sDiv (maxBound @Value) arg1
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 * arg2)
 
@@ -153,8 +153,8 @@ div rX dmemaddr = do
     state <- readState
     arg1 <- readRegister rX
     arg2 <- readMemory dmemaddr
-    let overflow = arg2 .== 0 ||| arg1 .== minBound @Value &&& arg2 .== -1
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg2 .== 0 .|| arg1 .== minBound @Value .&& arg2 .== -1
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (sDiv arg1 arg2)
 
@@ -164,8 +164,8 @@ div_si rX simm = do
     state <- readState
     arg1 <- readRegister rX
     arg2 <- pure $ fromSImm8 simm
-    let overflow = arg2 .== 0 ||| arg1 .== minBound @Value &&& arg2 .== -1
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflow = arg2 .== 0 .|| arg1 .== minBound @Value .&& arg2 .== -1
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (sDiv arg1 arg2)
 
@@ -222,7 +222,7 @@ abs :: Register -> Redfin ()
 abs rX = do
     state <- readState
     result <- Prelude.abs <$> readRegister rX
-    let overflowState = snd $ redfin (writeFlag Overflow true) state
+    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
     writeState $ ite (result .< 0) overflowState state
     writeRegister rX result
 
@@ -316,9 +316,8 @@ jmpi_cf simm = do
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.
 wait :: UImm10 -> Redfin ()
-wait _uimm = pure () -- error "wait is not yet implemented" -- delay (fromUImm10 uimm)
+wait _uimm = pure () -- delay (fromUImm10 uimm)
 
--- | Instruction @halt@ is currently implemented as a no-op. TODO: Provide a
--- more meaningful implementation, for example, by raising the @Halt@ flag.
+-- | Instruction @halt@ raises the @Halt@ flag and stops the execution.
 halt :: Redfin ()
-halt = writeFlag Halt true
+halt = writeFlag Halt sTrue

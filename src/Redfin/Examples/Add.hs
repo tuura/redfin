@@ -12,18 +12,18 @@
 -----------------------------------------------------------------------------
 module Redfin.Examples.Add where
 
-import Prelude hiding (read)
-import Text.Pretty.Simple (pPrint)
-import Data.SBV hiding ((%), (#))
-import Redfin
-import Redfin.Assembly hiding (div, abs)
-import Redfin.Listing
-import qualified Redfin.Assembly as Assembly
-import Redfin.Simulate
-import Redfin.Data.Fixed
-import Redfin.Language.Expression
-import Redfin.Examples.Common
-import Redfin.Examples.Energy.Units
+import           Data.SBV                     hiding (( # ), (%))
+import           Prelude                      hiding (read)
+import           Redfin
+import           Redfin.Assembly              hiding (abs, div)
+import qualified Redfin.Assembly              as Assembly
+import           Redfin.Data.Fixed
+import           Redfin.Examples.Common
+import           Redfin.Examples.Energy.Units
+import           Redfin.Language.Expression
+import           Redfin.Listing
+import           Redfin.Simulate
+import           Text.Pretty.Simple           (pPrint)
 
 addHaskell :: Integral a => a -> a -> a
 addHaskell x y = x + y
@@ -44,35 +44,35 @@ addLowLevel = do
     add r0 y
     halt
 
-addOverflow :: Symbolic SBool
-addOverflow = do
-    x <- forall "t1"
-    y <- forall "t2"
-    -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    let mem = initialiseMemory [(0, x), (1, y), (3, 100)]
-        steps = 100
-        -- finalStateLL = simulate steps $ boot addLowLevel mem
-        finalStateHL = simulate steps $ boot addHighLevel mem
-        -- resultLL = readArray (registers finalStateLL) 0
-        resultHL = readArray (registers finalStateHL) 0
-        overflow = readArray (flags finalStateHL) (flagId Overflow)
-    pure $ bnot overflow -- resultLL .== resultHL
+-- addOverflow :: Symbolic SBool
+-- addOverflow = do
+--     x <- forall "t1"
+--     y <- forall "t2"
+--     -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+--     -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+--     -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+--     -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
+--     let mem = initialiseMemory [(0, x), (1, y), (3, 100)]
+--         steps = 100
+--         -- finalStateLL = simulate steps $ boot addLowLevel mem
+--         finalStateHL = simulate steps $ boot addHighLevel mem
+--         -- resultLL = readArray (registers finalStateLL) 0
+--         resultHL = readArray (registers finalStateHL) 0
+--         overflow = readArray (flags finalStateHL) (flagId Overflow)
+--     pure $ bnot overflow -- resultLL .== resultHL
 
-equivalence :: Symbolic SBool
-equivalence = do
-    x <- forall "t1"
-    y <- forall "t2"
-    -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    let mem = initialiseMemory [(0, x), (1, y), (3, 100)]
-        steps = 100
-        finalStateLL = simulate steps $ boot addLowLevel mem
-        finalStateHL = simulate steps $ boot addHighLevel mem
-        resultLL = readArray (registers finalStateLL) 0
-        resultHL = readArray (registers finalStateHL) 0
-    pure $ resultLL .== resultHL
+-- equivalence :: Symbolic SBool
+-- equivalence = do
+--     x <- forall "t1"
+--     y <- forall "t2"
+--     -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+--     -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+--     -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+--     -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
+--     let mem = initialiseMemory [(0, x), (1, y), (3, 100)]
+--         steps = 100
+--         finalStateLL = simulate steps $ boot addLowLevel mem
+--         finalStateHL = simulate steps $ boot addHighLevel mem
+--         resultLL = readArray (registers finalStateLL) 0
+--         resultHL = readArray (registers finalStateHL) 0
+--     pure $ resultLL .== resultHL

@@ -40,15 +40,15 @@ module Redfin.Assembly (
     runWriter
     ) where
 
-import Control.Monad
-import Data.Maybe (fromJust)
-import Control.Monad.State
-import qualified Data.Map.Strict as Map
-import Data.Bits hiding (bit, xor)
-import Data.SBV hiding (label)
-import Prelude hiding (and, div, not, or, abs)
+import           Control.Monad
+import           Control.Monad.State
+import           Data.Bits           hiding (bit, xor)
+import qualified Data.Map.Strict     as Map
+import           Data.Maybe          (fromJust)
+import           Data.SBV            hiding (label)
+import           Prelude             hiding (abs, and, div, not, or)
 
-import Redfin hiding (State, instructionCounter, program)
+import           Redfin              hiding (State, instructionCounter, program)
 
 type Labels = Map.Map String InstructionAddress
 
@@ -65,7 +65,6 @@ type P = [InstructionCode]
 -- | An assembly writer monad.
 data Writer a = Writer
     { runWriter :: P -> (a, P)
-    , topOpcode :: Opcode
     } deriving Functor
 
 instance Show a => Show (Writer a) where
@@ -186,7 +185,7 @@ abs rX = write 0b111001 (register rX)
 halt   = write 0b000000 0
 
 pad :: Int -> [SBool]
-pad k = replicate k false
+pad k = replicate k sFalse
 
 opcode :: Opcode -> InstructionCode
 opcode o = fromBitsLE $ pad 10 ++ (take 6 $ blastLE o)

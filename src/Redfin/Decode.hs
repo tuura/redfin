@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Decode
--- Copyright   :  (c) Andrey Mokhov 2017
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2017-2020
 --
--- Maintainer  :  andrey.mokhov@gmail.com
+-- Maintainer  :  mail@geo2a.info
 -- Stability   :  experimental
 --
 -- REDFIN instruction set.
@@ -16,9 +16,9 @@ module Redfin.Decode (
     decodeOpcode, decodeRegister, decodeMemoryAddress, decodeSImm8,
     decodeSImm10, decodeUImm8, decodeUImm10
     ) where
-import Data.SBV
+import           Data.SBV
 
-import Redfin
+import           Redfin
 import qualified Redfin.Semantics as S
 
 -- | Execute the instruction pointed to by the instruction counter, performing
@@ -85,10 +85,10 @@ decodeAndExecute code =
          0b111000 -> S.not   register
          0b111001 -> S.abs   register
          0b000000 -> S.halt
-         _        -> writeFlag IllegalInstruction true
+         _        -> writeFlag IllegalInstruction sTrue
 
 pad :: Int -> [SBool]
-pad k = replicate k false
+pad k = replicate k sFalse
 
 decodeOpcode :: InstructionCode -> Opcode
 decodeOpcode c = fromBitsLE $ (drop 10 $ blastLE c) ++ pad 2
