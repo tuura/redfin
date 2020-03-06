@@ -52,14 +52,14 @@ energyEstimateHighLevelFP = do
 energyEstimateLowLevel :: Script
 energyEstimateLowLevel = do
     let { t1 = 0; t2 = 1; p1 = 2; p2 = 3 }
-    -- ld r0 t1
-    -- sub r0 t2
-    -- Assembly.abs r0
-    -- ld r1 p1
-    -- add r1 p2
-    -- st r1 p2
-    -- mul r0 p2
-    -- sra_i r0 1
+    ld r0 t1
+    sub r0 t2
+    Assembly.abs r0
+    ld r1 p1
+    add r1 p2
+    st r1 p2
+    mul r0 p2
+    sra_i r0 1
     halt
 
 equivalence :: Symbolic SBool
@@ -76,8 +76,8 @@ equivalence = do
     let steps = 100
     emptyRegs <- mkRegisters "registers" []
     emptyFlags <- mkFlags "flags" []
-    let progLowLevel = assemble energyEstimateLowLevel
-        progHighLevel = assemble energyEstimateHighLevel
+    progLowLevel <- assemble energyEstimateLowLevel
+    progHighLevel <- assemble energyEstimateHighLevel
     let finalStateLL = simulate steps $ boot progLowLevel emptyRegs mem emptyFlags
         finalStateHL = simulate steps $ boot progHighLevel emptyRegs mem emptyFlags
     let resultLL = readArray (registers finalStateLL) 0
@@ -98,50 +98,33 @@ highLevelFaultyExample = do
     let steps = 100
     emptyRegs <- mkRegisters "registers" []
     emptyFlags <- mkFlags "flags" []
-    let progHighLevel = assemble energyEstimateHighLevel
+    progHighLevel <- assemble energyEstimateHighLevel
     let finalState = simulate steps $ boot progHighLevel emptyRegs mem emptyFlags
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   sNot overflow
          .&& result .>= 0
 
--- highLevelCorrect :: Symbolic SBool
--- highLevelCorrect = do
---     t1 <- forall "t1"
---     t2 <- forall "t2"
---     p1 <- forall "p1"
---     p2 <- forall "p2"
---     constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
---     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
---     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
---     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
---     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
---         steps = 100
---         finalState = simulate steps $ boot energyEstimateHighLevel mem
---         result = readArray (registers finalState) 0
---         overflow = readArray (flags finalState) (flagId Overflow)
---     pure $   bnot overflow
---          .&& result .>= 0
-
-
--- highLevelCorrectFP :: Symbolic SBool
--- highLevelCorrectFP = do
---     t1 <- forall "t1"
---     t2 <- forall "t2"
---     p1 <- forall "p1"
---     p2 <- forall "p2"
---     constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
---     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
---     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
---     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
---     let mem = initialiseMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
---         steps = 100
---         finalState = simulate steps $ boot energyEstimateHighLevel mem
---         result = readArray (registers finalState) 0
---         overflow = readArray (flags finalState) (flagId Overflow)
---     pure $
---         -- bnot overflow .&&
---         (Fixed $ result) .>= 0
+highLevelCorrect :: Symbolic SBool
+highLevelCorrect = do
+    t1 <- forall "t1"
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2"
+    constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
+    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+    prog <- assemble energyEstimateHighLevel
+    emptyRegs <- mkRegisters "registers" []
+    emptyFlags <- mkFlags "flags" []
+    let steps = 100
+        finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
+        result = readArray (registers finalState) 0
+        overflow = readArray (flags finalState) (flagId Overflow)
+    pure $   sNot overflow
+         .&& result .>= 0
 
 -- simulateHighLevel :: IO ()
 -- simulateHighLevel = do
@@ -154,19 +137,6 @@ highLevelFaultyExample = do
 --     putStr "Memory Dump: "
 --     pPrint memoryDump
 --     putStrLn $ "Estimated energy: " ++ show (readArray (registers finalState) 0)
---     putStrLn $ "Clock: " ++ show (clock finalState)
-
--- simulateHighLevelFP :: IO ()
--- simulateHighLevelFP = do
---     let mem = initialiseMemory [ (0, (getFixed . toFixed) 10)
---                                , (1, (getFixed . toFixed) 5)
---                                , (2, (getFixed . toFixed) 3)
---                                , (3, (getFixed . toFixed) 5), (5, 100)]
---         finalState = simulate 100 $ boot energyEstimateHighLevelFP mem
---         memoryDump = dumpMemory 0 255 $ memory finalState
---     putStr "Memory Dump: "
---     pPrint memoryDump
---     putStrLn $ "Estimated energy: " ++ show (Fixed $ readArray (registers finalState) 0)
 --     putStrLn $ "Clock: " ++ show (clock finalState)
 
 -- An alternative to defining these orphan instances is to switch to SBV's type
