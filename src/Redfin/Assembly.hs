@@ -81,10 +81,11 @@ machineCode src =
     in map snd $ reverse $ program $ snd $ runState src (MkAssemblerState [] labels 0)
 
 -- | Assemble an assembly script into a program
-assemble :: Script -> Program
-assemble src = foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
+assemble :: Script -> Symbolic Program
+assemble src = do
+  a0 <- newArray_ (Just 0)
+  return $ foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
   where
-    a0     = mkSFunArray (const 0)
     prg    = machineCode src
 
 -- | Declare a label in a program
