@@ -1,11 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Redfin.Examples.Energy where
--- (
---         energyEstimate, energyEstimateHighLevel, energyEstimateLowLevel,
---         equivalence, highLevelFaultyExample, highLevelCorrect,
---         simulateHighLevel
---     ) where
+
+module Redfin.Examples.Energy (
+  energyEstimate, energyEstimateHighLevel, energyEstimateLowLevel,
+  faultyExample, correct, equivHaskell, equivalence
+  ) where
 
 import           Control.Monad.IO.Class       (liftIO)
 import           Data.SBV                     hiding (( # ), (%))
@@ -84,8 +83,27 @@ equivalence = do
         resultHL = readArray (registers finalStateHL) 0
     pure $ resultLL .== resultLL
 
-highLevelFaultyExample :: Symbolic SBool
-highLevelFaultyExample = do
+equivHaskell :: Script -> Symbolic SBool
+equivHaskell src = do
+    t1 <- forall "t1"
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2"
+    constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
+    constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
+    constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
+    constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
+    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+    let steps = 100
+    emptyRegs <- mkRegisters "registers" []
+    emptyFlags <- mkFlags "flags" []
+    prog <- assemble src
+    let finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
+        result = readArray (registers finalState) 0
+    pure $ result .== energyEstimate t1 t2 p1 p2
+
+faultyExample :: Script -> Symbolic SBool
+faultyExample src = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
@@ -98,15 +116,15 @@ highLevelFaultyExample = do
     let steps = 100
     emptyRegs <- mkRegisters "registers" []
     emptyFlags <- mkFlags "flags" []
-    progHighLevel <- assemble energyEstimateHighLevel
-    let finalState = simulate steps $ boot progHighLevel emptyRegs mem emptyFlags
+    prog <- assemble src
+    let finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   sNot overflow
          .&& result .>= 0
 
-highLevelCorrect :: Symbolic SBool
-highLevelCorrect = do
+correct :: Script -> Symbolic SBool
+correct src = do
     t1 <- forall "t1"
     t2 <- forall "t2"
     p1 <- forall "p1"
@@ -116,7 +134,7 @@ highLevelCorrect = do
     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
     mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-    prog <- assemble energyEstimateHighLevel
+    prog <- assemble src
     emptyRegs <- mkRegisters "registers" []
     emptyFlags <- mkFlags "flags" []
     let steps = 100

@@ -34,16 +34,18 @@ library
                         Redfin.Examples.MotorControl
                         Redfin.Semantics
                         Redfin.Data.Fixed
-    build-depends:      base       >= 4.8 && < 5,
+    build-depends:      QuickCheck,
+                        base       >= 4.8 && < 5,
                         containers >= 0.5.7,
-                        mtl,
+                        directory >= 1.3.3.0,
                         extra,
-                        sbv >= 7.10,
+                        mtl,
                         pretty-simple,
+                        sbv >= 7.10,
+                        text,
+                        time >= 1.8.0.2,
                         units >= 2.4.1.1,
-                        units-defs,
-                        QuickCheck,
-                        text
+                        units-defs
     default-language:   Haskell2010
     default-extensions: FlexibleContexts
                         GeneralizedNewtypeDeriving
@@ -65,15 +67,19 @@ test-suite main
   type:             exitcode-stdio-1.0
   main-is:          tests/Main.hs
   default-language: Haskell2010
-  build-depends:    redfin
+  build-depends:    QuickCheck
                   , base >= 4.7 && < 5
-                  , QuickCheck
+                  , directory >= 1.3.3.0
+                  , redfin
+                  , time >= 1.8.0.2
 
 executable benchmark
   main-is:              Main.hs
   hs-source-dirs:       benchmark
   build-depends:        base,
-                        time,
                         directory,
+                        directory >= 1.3.3.0,
+                        redfin,
                         sbv,
-                        redfin
+                        time,
+                        time >= 1.8.0.2

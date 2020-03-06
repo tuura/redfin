@@ -44,35 +44,22 @@ addLowLevel = do
     add r0 y
     halt
 
--- addOverflow :: Symbolic SBool
--- addOverflow = do
---     x <- forall "t1"
---     y <- forall "t2"
---     -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
---     -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
---     -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
---     -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
---     let mem = initialiseMemory [(0, x), (1, y), (3, 100)]
---         steps = 100
---         -- finalStateLL = simulate steps $ boot addLowLevel mem
---         finalStateHL = simulate steps $ boot addHighLevel mem
---         -- resultLL = readArray (registers finalStateLL) 0
---         resultHL = readArray (registers finalStateHL) 0
---         overflow = readArray (flags finalStateHL) (flagId Overflow)
---     pure $ bnot overflow -- resultLL .== resultHL
-
--- equivalence :: Symbolic SBool
--- equivalence = do
---     x <- forall "t1"
---     y <- forall "t2"
---     -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
---     -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
---     -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
---     -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
---     let mem = initialiseMemory [(0, x), (1, y), (3, 100)]
---         steps = 100
---         finalStateLL = simulate steps $ boot addLowLevel mem
---         finalStateHL = simulate steps $ boot addHighLevel mem
---         resultLL = readArray (registers finalStateLL) 0
---         resultHL = readArray (registers finalStateHL) 0
---     pure $ resultLL .== resultHL
+equivalence :: Symbolic SBool
+equivalence = do
+    x <- forall "t1"
+    y <- forall "t2"
+    -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
+    -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
+    -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
+    -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
+    emptyRegs <- mkRegisters "registers" []
+    emptyFlags <- mkFlags "flags" []
+    progLL <- assemble addLowLevel
+    progHL <- assemble addHighLevel
+    mem <- mkMemory "memory" [(0, x), (1, y), (3, 100)]
+    let steps = 100
+        finalStateLL = simulate steps $ boot progLL emptyRegs mem emptyFlags
+        finalStateHL = simulate steps $ boot progHL emptyRegs mem emptyFlags
+        resultLL = readArray (registers finalStateLL) 0
+        resultHL = readArray (registers finalStateHL) 0
+    pure $ resultLL .== resultHL
