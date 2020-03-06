@@ -1,4 +1,5 @@
-{-# LANGUAGE BinaryLiterals, DeriveFunctor #-}
+{-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE DeriveFunctor  #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 -----------------------------------------------------------------------------
 -- |
@@ -14,7 +15,7 @@
 -- module Redfin.Assembly where
 module Redfin.Assembly (
     -- * Assembly scripts and assembler
-    Script, machineCode, assemble, topOpcode, label, (@@), goto, goto_ct, goto_cf,
+    Script, machineCode, assemble, label, (@@), goto, goto_ct, goto_cf,
 
     -- * Arithmetic instructions
     add, add_si, sub, sub_si, mul, mul_si, div, div_si,
@@ -42,7 +43,7 @@ module Redfin.Assembly (
 
 import           Control.Monad
 import           Control.Monad.State
-import           Data.Bits           hiding (bit, xor)
+-- import           Data.Bits           hiding (bit, xor)
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe          (fromJust)
 import           Data.SBV            hiding (label)

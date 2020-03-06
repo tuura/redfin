@@ -1,4 +1,6 @@
-{-# LANGUAGE BinaryLiterals, OverloadedStrings #-}
+{-# LANGUAGE BinaryLiterals    #-}
+{-# LANGUAGE MultiWayIf        #-}
+{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Listing
@@ -14,11 +16,12 @@ module Redfin.Listing (
     showInstructionCode, showScript, prettyPrintScript
 ) where
 
-import qualified Data.Text.Lazy as T
-import Text.Pretty.Simple (pPrint)
-import Redfin
-import Redfin.Assembly
-import Redfin.Decode
+import qualified Data.SBV           as SBV
+import qualified Data.Text.Lazy     as T
+import           Redfin
+import           Redfin.Assembly
+import           Redfin.Decode
+import           Text.Pretty.Simple (pPrint)
 
 -- | Pretty-print a 'Script' to stdout.
 prettyPrintScript :: Script -> IO ()
