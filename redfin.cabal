@@ -1,15 +1,15 @@
 name:          redfin
 version:       0.0.1
 synopsis:      Specification and verification of the REDFIN sequencer
-author:        Andrey Mokhov <andrey.mokhov@gmail.com>, github: @snowleopard
-maintainer:    Andrey Mokhov <andrey.mokhov@gmail.com>, github: @snowleopard
-copyright:     Andrey Mokhov, 2017
+author:        Andrey Mokhov <andrey.mokhov@gmail.com>, github: @snowleopard,
+               Georgy Lukyanov <mail@geo2a.info>, github: @geo2a
+maintainer:    Georgy Lukyanov <mail@geo2a.info>, github: @geo2a
+copyright:     Andrey Mokhov, Georgy Lukyanov, 2017-2020
 homepage:      https://github.com/tuura/redfin
 category:      Hardware
 build-type:    Simple
 cabal-version: >=1.10
 extra-source-files: README.md
-                  , tests/*.hs
 
 source-repository head
     type:     git
@@ -22,18 +22,17 @@ library
                         Redfin.Decode
                         Redfin.Listing
                         Redfin.Language.Expression
+                        Redfin.Data.Fixed
                         Redfin.Simulate
 
                         Redfin.Examples.Common
                         Redfin.Examples.Energy
                         Redfin.Examples.Energy.Units
                         Redfin.Examples.Energy.WCET
-                        Redfin.Examples.Energy.OverflowHunt
                         Redfin.Examples.ManhattanDistance
                         Redfin.Examples.Sum
-                        Redfin.Examples.MotorControl
                         Redfin.Semantics
-                        Redfin.Data.Fixed
+
     build-depends:      QuickCheck,
                         base       >= 4.8 && < 5,
                         containers >= 0.5.7,
@@ -62,16 +61,6 @@ library
                         -fno-warn-unused-imports
                         -fno-warn-name-shadowing
                         -fno-warn-unused-top-binds
-
-test-suite main
-  type:             exitcode-stdio-1.0
-  main-is:          tests/Main.hs
-  default-language: Haskell2010
-  build-depends:    QuickCheck
-                  , base >= 4.7 && < 5
-                  , directory >= 1.3.3.0
-                  , redfin
-                  , time >= 1.8.0.2
 
 executable benchmark
   main-is:              Main.hs

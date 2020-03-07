@@ -1,38 +1,32 @@
 module Redfin.Examples.Energy.WCET where
 
-import Prelude hiding (read)
-import Text.Pretty.Simple (pPrint)
-import Data.SBV
-import Redfin
-import Redfin.Assembly hiding (div, abs)
-import qualified Redfin.Assembly as Assembly
-import Redfin.Simulate
-import Redfin.Language.Expression
-import Redfin.Examples.Common
+import           Data.SBV
+import           Prelude                    hiding (read)
+import           Text.Pretty.Simple         (pPrint)
 
+import           Redfin
+import           Redfin.Assembly            hiding (abs, div)
+import qualified Redfin.Assembly            as Assembly
+import           Redfin.Examples.Common
+import           Redfin.Examples.Energy
+import           Redfin.Language.Expression
+import           Redfin.Simulate
 
--- adder_ld_si :: Script
--- adder_ld_si = do
---     let x = 0
---     ld_si r0 20
---     add r0 x
-
--- adder_ld :: Script
--- adder_ld = do
---     let x = 0
---         y = 1
---     ld r0 1
---     add r0 x
-
--- worstCaseClock :: IO OptimizeResult
--- worstCaseClock = optimize Lexicographic $ do
---     x <- sInt64 "x"
---     y <- sInt64 "y"
---     let mem = initialiseMemory [(0, x), (1, y)]
---         steps = 100
---         finalStateHL = simulate steps $ boot energyEstimate mem
---         finalStateLL = simulate steps $ boot energyEstimateLowLevel mem
---     -- maximize "Max clock HL" $ clock finalStateHL
---     -- maximize "Max clock LL" $ clock finalStateLL
---     -- minimize "Min clock HL" $ clock finalStateHL
---     minimize "Min clock LL" $ clock finalStateLL
+worstCaseClock :: IO OptimizeResult
+worstCaseClock = optimize Lexicographic $ do
+    t1 <- exists "t1"
+    t2 <- exists "t2"
+    p1 <- exists "p1"
+    p2 <- exists "p2"
+    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+    let steps = 100
+    emptyRegs <- mkRegisters "registers" []
+    emptyFlags <- mkFlags "flags" []
+    progLowLevel <- assemble energyEstimateLowLevel
+    progHighLevel <- assemble energyEstimateHighLevel
+    let finalStateLL = simulate steps $ boot progLowLevel emptyRegs mem emptyFlags
+        finalStateHL = simulate steps $ boot progHighLevel emptyRegs mem emptyFlags
+    maximize "Max clock HL" $ clock finalStateHL
+    maximize "Max clock LL" $ clock finalStateLL
+    minimize "Min clock HL" $ clock finalStateHL
+    minimize "Min clock LL" $ clock finalStateLL

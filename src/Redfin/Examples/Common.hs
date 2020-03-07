@@ -7,11 +7,6 @@ import           Redfin.Assembly
 r0, r1, r2, r3 :: Register
 [r0, r1, r2, r3] = [0 .. 3]
 
--- initArray :: (SymArray array, Monoid b) => [(a, b)] -> Symbolic (array a b)
--- initArray inits = do
---     blanks <- newArray "" (Just . literal mempty)
---     pure $ foldr (\(k, v) arr -> writeArray arr k v) blanks
-
 mkRegisters :: String -> [(Register, Value)] -> Symbolic RegisterBank
 mkRegisters name inits = do
     blanks <- newArray name (Just . literal $ 0)
