@@ -1,23 +1,24 @@
 \section{Formal Verification\label{sec-verification}}
 
 This section presents a formal verification framework developed on top of
-the REDFIN semantic core~(\S\ref{sec-transformer}).
+the REDFIN semantic core~(\S\ref{sec-transformer}). The verification workflow
+comprises the following steps:
 
-\noindent
-The verification workflow comprises the following steps:
-
+\vspace{1mm}
 \begin{itemize}
     \item Develop programs in low-level REDFIN assembly, and in a high-level
     typed language embedded in Haskell.
     \item Test REDFIN programs on concrete input values.
     \item Define functional correctness and worst case execution time properties
-    in the SBV property language.
+    in the SBV language.
     \item Verify the properties or obtain counterexamples.
 \end{itemize}
+\vspace{1mm}
 
 \noindent
 Consider the following simple spacecraft control task.
 
+\vspace{1mm}
 \begin{tcolorbox}
 Let $t_1$ and $t_2$ be two different time points (measured in ms),
 and $p_1$ and $p_2$ be two power values (measured in mW).
@@ -27,6 +28,7 @@ using linear approximation, rounding down to the nearest integer:
 \textit{energyEstimate}(t_1, t_2, p_1, p_2) = \left\lfloor \frac{|t_1 - t_2| * (p_1 + p_2)}{2} \right\rfloor.
 \]
 \end{tcolorbox}
+\vspace{1mm}
 
 \noindent
 This task looks too simple, but in fact it has a few pitfalls that,
@@ -47,11 +49,12 @@ expression:
 
 % Using Haskell's polymorphism, we can
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 energyEstimate :: Integral a => a -> a -> a -> a -> a
-energyEstimate t1 t2 p1 p2 =
-    abs (t1 - t2) * (p1 + p2) `div` 2
+energyEstimate t1 t2 p1 p2 = abs (t1 - t2) * (p1 + p2) `div` 2
 \end{minted}
+\vspace{1mm}
 
 \noindent
 Thanks to polymorphism, we can treat \hs{energyEstimate} both as a numeric
@@ -63,7 +66,8 @@ can manipulate the processor state only by executing instructions}, e.g. the
 only way to set the \hs{Overflow} flag is to execute an arithmetic instruction
 that might cause an overflow.
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 energyEstimateHighLevel :: Script
 energyEstimateHighLevel = do
   let t1    = read (IntegerVariable 0)
@@ -76,8 +80,9 @@ energyEstimateHighLevel = do
   halt
 \end{minted}
 \label{energyEstimateHighLevel}
+\vspace{1mm}
 
-\noindent
+% \noindent
 Here the type \hs{IntegerVariable} is used to statically distinguish between integer
 and fixed-point numbers, \hs{Temporary} to mark temporary words, so they cannot
 be mixed with inputs and outputs, and \hs{Stack} to denote the location of the
@@ -93,15 +98,16 @@ We can run symbolic simulation for 100 steps, initialising the program and data
 memory of the processor using the function \hs{simulate} defined above and a
 helper function \hs{boot}.
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 main = do
-  let dataMemory = [10, 5, 3, 5, 0, 100]
-      finalState = simulate 100 $
+    let dataMemory = [10, 5, 3, 5, 0, 100]
+        finalState = simulate 100 $
         boot energyEstimateHighLevel dataMemory
-  printMemoryDump 0 5 (memory finalState)
-  putStrLn $ "R0: " ++ show
-             (readArray (registers finalState) r0)
+    printMemoryDump 0 5 (memory finalState)
+    putStrLn $ "R0: " ++ show (readArray (registers finalState) r0)
 \end{minted}
+\vspace{1mm}
 
 \noindent
 As the simulation result we get a \hs{finalState}. We inspect it by
@@ -109,10 +115,12 @@ printing relevant components: the values of the first six memory cells, and the
 result of the computation located in the register~\hs{r0}. Note that the stack
 pointer (cell 5) holds 100, as in the initial state, which means the stack is empty.
 
+\vspace{1mm}
 \begin{minted}[frame=single, fontsize=\small]{text}
 Memory dump: [10, 5, 3, 5, 5, 100]
 R0: 20
 \end{minted}
+\vspace{1mm}
 
 Simulating programs with specific inputs is useful for diagnostics and test, but
 SMT solvers allow us to verify the correctness for \emph{all valid input
@@ -125,41 +133,45 @@ estimation program. Consider the following correctness property.
 % specification, implemented the energy monitoring subroutines, and started the
 % verification. One of the requirements is as follows.
 
+\vspace{1mm}
 \begin{tcolorbox}
 Assuming that values $p_1$ and $p_2$ are non-negative integers, the energy
 estimation subroutine must always return a non-negative integer value.
 \end{tcolorbox}
+\vspace{1mm}
 
 To check that the program meets this requirement, we translate
 \hs{energyEstimateHighLevel} into an SMT formula,
 and formulate the corresponding theorem:
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 theorem = do
-  t1 <- forall "t1" -- Initialise symbolic variables
-  t2 <- forall "t2"
-  p1 <- forall "p1"
-  p2 <- forall "p2" -- And then add constraints:
-  constrain $ p1 .>= 0 &&& p2 .>= 0
-  -- Initialise the data memory with symbolic variables:
-  let dataMemory = [t1, t2, p1, p2, 0, 100]
-      finalState = simulate 100 $
+    t1 <- forall "t1" -- Initialise symbolic variables
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2" -- And then add constraints:
+    constrain $ p1 .>= 0 &&& p2 .>= 0
+    -- Initialise the data memory with symbolic variables:
+    let dataMemory = [t1, t2, p1, p2, 0, 100]
+        finalState = simulate 100 $
         boot energyEstimateHighLevel dataMemory
-      result = readArray (registers finalState) r0
-      halted = readArray (flags finalState) (flagId Halt)
-  return $ halted &&& result .>= 0
-       &&& result .== energyEstimate t1 t2 p1 p2
+        result = readArray (registers finalState) r0
+        halted = readArray (flags finalState) (flagId Halt)
+    return $ halted &&& result .>= 0 &&& result .== energyEstimate t1 t2 p1 p2
 \end{minted}
+\vspace{1mm}
 
 \noindent
-We extract the computed result and the value of the flag \hs{Halt} from the
-\hs{finalState}, and then assert that the processor has halted, the result is
-non-negative, and is equal to that computed by the high-level Haskell expression
-\hs{energyEstimate}.
+We extract the computed \hs{result} and the value of the flag \hs{Halt} from the
+\hs{finalState}, and then assert that the processor has \hs{halted}, and that
+the \hs{result} is non-negative and is equal to that computed by the high-level
+Haskell expression~\hs{energyEstimate}.
 The resulting SMT formula can be checked by Z3 in
 3.0s\footnote{We use a laptop with 2.90GHz Intel Core i5-4300U processor, 8GB
-RAM (3MB cache), and the SMT solver Z3 version 4.5.1 (64-bit).}:
+RAM (3MB cache), and the SMT solver Z3 v4.5.1 (64-bit).}:
 
+\vspace{1mm}
 \begin{minted}[frame=single,fontsize=\small]{text}
 > proveWith z3 theorem
 Falsifiable. Counter-example:
@@ -168,6 +180,7 @@ Falsifiable. Counter-example:
   p1 =  149927859193384455 :: Int64
   p2 =  157447350457463356 :: Int64
 \end{minted}
+\vspace{1mm}
 
 %TODO: Can we obtain a simpler counterexample using SBV optimisation?
 \noindent
@@ -176,6 +189,7 @@ satisfy the above property. Indeed, the expression evaluates to a negative
 value on the provided inputs due to an \emph{integer overflow}. We therefore
 refine the property:
 
+\vspace{1mm}
 \begin{tcolorbox}
 According to the spacecraft power system specification, $p_1$ and $p_2$ are
 non-negative integers not exceeding 1W. The time is measured
@@ -183,6 +197,7 @@ from the mission start, hence $t_1$ and $t_2$ are non-negative and do not exceed
 the time span of the mission, which is 30 years. Under these assumptions,
 the energy estimation subroutine must return a non-negative integer value.
 \end{tcolorbox}
+\vspace{1mm}
 
 \noindent
 We need to modify time and power constraints accordingly:
@@ -190,11 +205,13 @@ We need to modify time and power constraints accordingly:
 % precise here. We do not distinguish between regular and leap years, and use
 % a conservative upper bound of 366 days per year.}
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 constrain $ p1 .<= toMilliWatts   ( 1 :: Watt)
         &&& t1 .<= toMilliSeconds (30 :: Year)
         &&& t1 .>= 0 &&& t2 .>= 0 &&& ... -- etc.
 \end{minted}
+\vspace{1mm}
 
 \noindent
 Rerunning Z3 produces the desired \textsf{QED} outcome in 4.8s.
@@ -212,7 +229,8 @@ to improve the resulting code. In some resource-constrained situations, a fully
 hand-crafted assembly code may be required. As an example, consider the
 following low-level program:
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 energyEstimateLowLevel :: Script
 energyEstimateLowLevel = do
     let { t1 = 0; t2 = 1; p1 = 2; p2 = 3 }
@@ -227,6 +245,7 @@ energyEstimateLowLevel = do
     halt
 \end{minted}
 \label{energyEstimateLowLevel}
+\vspace{1mm}
 
 This program computes the energy estimate using only 9 instructions, whereas
 a direct unoptimised translation of the \hs{energyEstimate} expression into
@@ -238,27 +257,29 @@ the same output on all valid inputs. This allows an engineer to
 optimise a high-level prototype and have a guarantee that no bugs were
 introduced in the process.
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 equivalence = do
-  t1 <- forall "t1"
-  t2 <- forall "t2"
-  p1 <- forall "p1"
-  p2 <- forall "p2"
-  constrain $ p1 .>= 0 &&& p2 .>= 0
-          &&& t1 .>= 0 &&& t2 .>= 0
-          &&& p1 .<= toMilliWatts   ( 1 :: Watt)
-          &&& p2 .<= toMilliWatts   ( 1 :: Watt)
-          &&& t1 .<= toMilliSeconds (30 :: Year)
-          &&& t2 .<= toMilliSeconds (30 :: Year)
-  let memory   = [t1, t2, p1, p2, 0, 100]
-      llState  = simulate 100 $
+    t1 <- forall "t1"
+    t2 <- forall "t2"
+    p1 <- forall "p1"
+    p2 <- forall "p2"
+    constrain $ p1 .>= 0 &&& p2 .>= 0
+            &&& t1 .>= 0 &&& t2 .>= 0
+            &&& p1 .<= toMilliWatts   ( 1 :: Watt)
+            &&& p2 .<= toMilliWatts   ( 1 :: Watt)
+            &&& t1 .<= toMilliSeconds (30 :: Year)
+            &&& t2 .<= toMilliSeconds (30 :: Year)
+    let memory   = [t1, t2, p1, p2, 0, 100]
+        llState  = simulate 100 $
         boot energyEstimateLowLevel  memory
-      hlState  = simulate 100 $
+        hlState  = simulate 100 $
         boot energyEstimateHighLevel memory
-      llResult = readArray (registers llState) r0
-      hlResult = readArray (registers hlState) r0
-  return $ llResult .== hlResult
+        llResult = readArray (registers llState) r0
+        hlResult = readArray (registers hlState) r0
+    return $ llResult .== hlResult
 \end{minted}
+\vspace{1mm}
 
 \noindent
 The \hs{equivalence} check succeeds and takes 11.5s.
@@ -283,12 +304,14 @@ added~1~extra clock cycle in case of a negative argument.
 % \end{minted}
 %TODO: Same can be done about power
 
-\begin{minted}[fontsize=\small]{haskell}
+\vspace{1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 timingAnalysis = optimize Independent $ do
   ... -- Initialise and run symbolic simulation
   minimize "Best case"  (clock finalState)
   maximize "Worst case" (clock finalState)
 \end{minted}
+\vspace{1mm}
 
 \noindent
 The total delay of the program depends only on the sign of $t_1 - t_2$, thus
@@ -296,6 +319,7 @@ the best and worst cases differ only by one clock cycle. The worst case is
 achieved when the difference is negative ($t_1 - t_2 = -2$), as shown below.
 Z3 finishes in 0.5s.
 
+\vspace{2mm}
 \noindent
 \begin{minipage}{0.53\linewidth}
 \begin{minted}[frame=single,fontsize=\small]{text}

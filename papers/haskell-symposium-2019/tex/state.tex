@@ -3,7 +3,7 @@ In this section we formally define the REDFIN microarchitecture and express the
 semantics of the instruction set as an explicit and symbolic state transformer.
 
 \begin{figure}[t]
-\begin{minted}[fontsize=\small]{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 data State = State
   { registers           :: RegisterBank
   , memory              :: Memory
@@ -14,7 +14,7 @@ data State = State
   , clock               :: Clock }
 \end{minted}
 \vspace{0mm}
-\begin{minted}[fontsize=\small]{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 type Register           = SymbolicValue Word2
 type Value              = SymbolicValue Int64
 type RegisterBank       = SymbolicArray Word2 Int64
@@ -22,13 +22,13 @@ type MemoryAddress      = SymbolicValue Word8
 type Memory             = SymbolicArray Word8 Int64
 \end{minted}
 \vspace{0mm}
-\begin{minted}[fontsize=\small]{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 type InstructionAddress = SymbolicValue Word8
 type InstructionCode    = SymbolicValue Word16
 type Program            = SymbolicArray Word8 Word16
 \end{minted}
 \vspace{0mm}
-\begin{minted}[fontsize=\small]{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 data Flag               = Condition@\,@|@\,@Overflow@\,@|@\,@Halt@\,@...
 type Flags              = SymbolicArray Flag Bool
 type Clock              = SymbolicValue Word64

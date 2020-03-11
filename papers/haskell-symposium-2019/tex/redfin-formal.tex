@@ -53,7 +53,7 @@ expression:
 % Using Haskell's polymorphism, we can
 
 \vspace{-0.3mm}
-\begin{minted}[fontsize=\small]{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 energyEstimate :: Integral a => a -> a -> a -> a -> a
 energyEstimate t1 t2 p1 p2 =
     abs (t1 - t2) * (p1 + p2) `div` 2
@@ -147,7 +147,7 @@ To check that the program meets this requirement, we translate
 \hs{energyEstimateHighLevel} into an SMT formula,
 and formulate the corresponding theorem:
 
-\begin{minted}[fontsize=\small]{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 theorem = do
   t1 <- forall "t1" -- Initialise symbolic variables
   t2 <- forall "t2"
