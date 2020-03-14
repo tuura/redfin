@@ -96,13 +96,18 @@ code and closely mirrors the high-level pseudocode. Fig.~\ref{fig-sym-tree} show
 a fragment of the program's symbolic execution tree that corresponds to the
 decision whether to accelerate, keep the velocity, or decelerate the motor.
 
-The decision is based on first estimating the resulting distance travelled using
-the next potential value $v_{next}$ as velocity. If $dist$ is not covered by that,
-the motor will be accelerated. Otherwise, the resulting distance gets estimated
-using the current velocity $v$, and in the case $v$ leads to an overshoot, the
-motor will be decelerated; otherwise, the current velocity is kept. These
-changes of velocity in a simulation on concrete data are illustrated by
-Fig.~\ref{fig-motor} (left).
+The decision is performed by computing the resulting total distance
+travelled from start to stop, based on the action taken in the current
+time step.  First, the total distance is computed if the motor were to
+accelerate for one more time step and then decelerated in the
+subsequent time steps.  If the computed total distance is less than or
+equal to dist, the decision to accelerate is committed.  Otherwise,
+the algorithm checks whether the targeted distance can be met by
+maintaining the current velocity for one more time step.  If even that
+would cause an overshoot, the decision for immediately commencing
+deceleration is taken. Fig.~\ref{fig-motor} illustrates this decision process by
+plotting the velocity and distance over time for a specific simulation
+run.
 
 \subsection{Loop Invariant Verification}
 
