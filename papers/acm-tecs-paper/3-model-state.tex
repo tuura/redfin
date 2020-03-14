@@ -311,11 +311,11 @@ remain idle.
 \vspace{1mm}
 \begin{minted}[xleftmargin=10pt]{haskell}
 simulate :: Int -> State -> State
-simulate steps s =
-    if steps <= 0 then s else ite halted s (simulate (steps - 1) next)
+simulate steps state =
+    if steps <= 0 then state else ite halted state (simulate (steps-1) next)
   where
-    halted = readArray (flags s) (flagId Halt)
-    next   = snd (transform executeInstruction s)
+    halted = readArray (flags state) (flagId Halt)
+    next   = snd (transform executeInstruction state)
 \end{minted}
 \vspace{1mm}
 
@@ -341,14 +341,14 @@ initial state and attaching the results as leaves to the current node.
 \vspace{1mm}
 \begin{minted}[xleftmargin=10pt]{haskell}
 simulate :: Int -> State -> Tree (Node Int State)
-simulate steps s = getTrace $ do
+simulate steps state = getTrace $ do
     modify (+1)
     n <- get
-    let halted = readArray (flags s) (flagId Halt)
+    let halted = readArray (flags state) (flagId Halt)
     if steps <= 0 || halted
-    then pure (mkTrace (Node n s) [])
-    else do futures <- traverse (simulate (steps - 1)) (executeInstruction s)
-            pure $ mkTrace (Node n s) futures
+    then pure (mkTrace (Node n state) [])
+    else do futures <- traverse (simulate (steps-1)) (executeInstruction state)
+            pure (mkTrace (Node n state) futures)
 \end{minted}
 \vspace{1mm}
 
