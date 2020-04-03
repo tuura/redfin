@@ -102,8 +102,7 @@ helper function \hs{boot}.
 \begin{minted}[xleftmargin=10pt]{haskell}
 main = do
     let dataMemory = [10, 5, 3, 5, 0, 100]
-        finalState = simulate 100 $
-        boot energyEstimateHighLevel dataMemory
+        finalState = simulate 100 $ boot energyEstimateHighLevel dataMemory
     printMemoryDump 0 5 (memory finalState)
     putStrLn $ "R0: " ++ show (readArray (registers finalState) r0)
 \end{minted}
@@ -154,8 +153,7 @@ theorem = do
     constrain $ p1 .>= 0 &&& p2 .>= 0
     -- Initialise the data memory with symbolic variables:
     let dataMemory = [t1, t2, p1, p2, 0, 100]
-        finalState = simulate 100 $
-        boot energyEstimateHighLevel dataMemory
+        finalState = simulate 100 $ boot energyEstimateHighLevel dataMemory
         result = readArray (registers finalState) r0
         halted = readArray (flags finalState) (flagId Halt)
     return $ halted &&& result .>= 0 &&& result .== energyEstimate t1 t2 p1 p2
@@ -271,10 +269,8 @@ equivalence = do
             &&& t1 .<= toMilliSeconds (30 :: Year)
             &&& t2 .<= toMilliSeconds (30 :: Year)
     let memory   = [t1, t2, p1, p2, 0, 100]
-        llState  = simulate 100 $
-        boot energyEstimateLowLevel  memory
-        hlState  = simulate 100 $
-        boot energyEstimateHighLevel memory
+        llState  = simulate 100 $ boot energyEstimateLowLevel  memory
+        hlState  = simulate 100 $ boot energyEstimateHighLevel memory
         llResult = readArray (registers llState) r0
         hlResult = readArray (registers hlState) r0
     return $ llResult .== hlResult

@@ -98,10 +98,10 @@ decision whether to accelerate, keep the velocity, or decelerate the motor.
 
 The decision is performed by computing the resulting total distance
 travelled from start to stop, based on the action taken in the current
-time step.  First, the total distance is computed if the motor were to
-accelerate for one more time step and then decelerated in the
+time step.  First, the total distance is computed if the motor was to
+accelerate for one more time step and then decelerate in the
 subsequent time steps.  If the computed total distance is less than or
-equal to dist, the decision to accelerate is committed.  Otherwise,
+equal to $dist$, the decision to accelerate is committed.  Otherwise,
 the algorithm checks whether the targeted distance can be met by
 maintaining the current velocity for one more time step.  If even that
 would cause an overshoot, the decision for immediately commencing
@@ -159,7 +159,7 @@ We take the following generic approach:
 
 \begin{itemize}
   \item Obtain the binary tree-shaped trace by symbolic execution in~\emph{branching} mode.
-  \item Split the trace into linear paths, thus enumerating all the possible
+  \item Split the trace into linear paths, thus enumerating all possible
     execution scenarios.
   \item For every path perform the analysis:
     \begin{itemize}
