@@ -12,7 +12,7 @@ considering the input parameters of the program, thus making the loop
 Presence of unbounded loops makes program verification by symbolic execution considerably
 harder~\cite[p.~50:20]{SurveySymExec-CSUR18}, since the number of program execution
 paths becomes infinite. In this section we consider an example
-of control program that drives a stepper motor and verify one of its essential
+of a control program that drives a stepper motor and verify one of its essential
 safety properties by formulating it as a~\emph{loop invariant} and ensuring that the
 invariant holds for every possible state of the loop.
 
@@ -56,8 +56,9 @@ moved further.
 \While {$true$}
   % Compute deceleration distance based on current speed
   \State $decel\_steps\gets v / a_{max}$
-  \algorithmiccomment{Compute deceleration distance based on current velocity}
+  \algorithmiccomment{Compute deceleration distance}
   \State $s_{decel} \gets a_{max} \cdot decel\_steps \cdot (decel\_steps + 1) / 2$
+  \algorithmiccomment{based on the current velocity\hspace{2.55mm}~}
   \If {$decel\_steps \cdot a_{max} \neq v$}
     \State $s_{decel} \gets s_{decel} + v$
   \EndIf
@@ -98,7 +99,7 @@ decision whether to accelerate, keep the velocity, or decelerate the motor.
 
 The decision is performed by computing the resulting total distance
 travelled from start to stop, based on the action taken in the current
-time step.  First, the total distance is computed if the motor was to
+time step.  First, the total distance is computed if the motor were to
 accelerate for one more time step and then decelerate in the
 subsequent time steps.  If the computed total distance is less than or
 equal to $dist$, the decision to accelerate is committed.  Otherwise,
@@ -197,12 +198,12 @@ are satisfiable.
 \Description[Please consult the text of this section for the description]{}
 \end{figure}
 
-Checking satisfiability of execution path is essential for mitigation of the path explosion
+Checking satisfiability of path conditions is essential for mitigating the path explosion
 problem. Precondition, when available, is assigned as the initial path condition and thus
 will become a subterm of every formula submitted to the solver.
-Identifying correct preconditions is essential for verification since they may
-drastically reduce the number of satisfiable paths in the symbolic execution tree
-of the program that is being verified.
+By identifying strong preconditions, we can drastically reduce the number of
+satisfiable paths in the symbolic execution tree of a program that is being
+verified, thereby significantly shortening verification times.
 
 With the branch pruning optimisation in place and the parameters restricted
 to $dist \in \mathopen[1, 200\mathclose]$, $v_{max} \in \mathopen[1, 30\mathclose]$ and

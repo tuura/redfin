@@ -340,7 +340,7 @@ initial state and attaching the results as leaves to the current node.
 
 \vspace{1mm}
 \begin{minted}[xleftmargin=10pt]{haskell}
-simulate :: Int -> State -> Tree (Node Int State)
+simulate :: Int -> State -> Tree State -- TODO: make the code work with this type
 simulate steps state = getTrace $ do
     modify (+1)
     n <- get
