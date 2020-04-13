@@ -126,8 +126,6 @@ is inductively defined as follows:
     \end{array}
     \]
 
-    % \item
-    % \vspace{-1mm}
     \noindent
     The semantics of a \emph{composite program} $\hs{i}\hs{:}\hs{p} \in P$,
     where the operator~\hs{:}~prepends an instruction $\hs{i} \in I$ to a program
@@ -146,11 +144,11 @@ language~\cite{wadler1990comprehending}. We call our state monad~\hs{Redfin} and
 define it as follows\footnote{A generic version of this monad is available in
 the standard module \hs{Control.Monad.State}.}:
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 data Redfin a = Redfin { transform :: State -> (a, State) }
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 A computation of type~\hs{Redfin}~\hs{a} yields a value of type~\hs{a}~and
@@ -162,14 +160,14 @@ to state transformers.
 \noindent
 For example, here is the state transformer $T_\textit{inc}$:
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 incrementInstructionCounter :: Redfin ()
 incrementInstructionCounter = Redfin $ \current -> ((), next)
   where
     next = current { instructionCounter = instructionCounter current + 1 }
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 In words, the state transformer looks up the value of the \hs{instructionCounter}
@@ -177,7 +175,7 @@ in the \hs{current} state and replaces it in the \hs{next} state with the
 incremented value. We can compose such primitive computations into more complex
 state transformers using Haskell's \hs{do}-notation:
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 readInstructionRegister :: Redfin InstructionCode
 readInstructionRegister = Redfin $ \s -> (instructionRegister s, s)
@@ -189,7 +187,7 @@ executeInstruction = do
     instructionCode <- readInstructionRegister
     decodeAndExecute instructionCode
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 Here \hs{readInstructionRegister} reads the instruction code from the current
@@ -204,24 +202,24 @@ The instruction~\hs{halt} sets the flag~\hs{Halt}, which stops the execution of
 the current subroutine until a new one is started by a higher-level system
 controller that resets~\hs{Halt}.
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 halt :: Redfin ()
 halt = writeFlag Halt true
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 The auxiliary function \hs{writeFlag} modifies the flag:
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 writeFlag :: Flag -> SymbolicValue Bool -> Redfin ()
 writeFlag flag value = Redfin $ \s -> ((), s')
   where
     s' = s { flags = writeArray (flags s) (flagId flag) value }
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 In the rest of the paper we will use auxiliary functions \hs{readRegister},
@@ -238,7 +236,7 @@ by setting~\hs{Overflow}. We use SBV's symbolic \emph{if-then-else}
 operation~\hs{ite} to \emph{merge} two symbolic values~---~in this case two
 possible next states, one of which is a state with the \hs{Overflow} flag set:
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 abs :: Register -> Redfin ()
 abs reg = do
@@ -248,14 +246,14 @@ abs reg = do
     writeState $ ite (result .< 0) state' state
     writeRegister reg result
 \end{minted}
-\vspace{1mm}
+
 
 \subsubsection{Conditional Branching}
 As an example of a control flow instruction consider \hs{jmpi_ct}, which
 tests the~\hs{Condition} flag, and adds the provided \hs{offset} to the
 instruction counter if the flag is set.
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 jmpi_ct :: SymbolicValue Int8 -> Redfin ()
 jmpi_ct offset = do
@@ -264,7 +262,7 @@ jmpi_ct offset = do
     let ic' = ite condition (ic + offset) ic
     writeInstructionCounter ic'
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 % After working through the above examples, it is worth noting that
@@ -304,20 +302,21 @@ an approach to verify a non-terminating program in branching mode.
 The function \hs{simulate} takes a number of simulation steps~$N$ and an initial
 symbolic \hs{State} as input, and runs \hs{executeInstruction} defined above~$N$
 times. In each \hs{state} we merge two possible futures: (i) if the \hs{Halt}
-flag is set, we continue the simulation from the~\hs{next}~state, (ii) otherwise
-we remain in the current \hs{state}, since in this case the processor must
-remain idle.
+flag is set, we stop the simulation and remain in the current \hs{state},
+since in this case the processor must remain idle; (ii) otherwise we continue the
+simulation from the~\hs{future}~state.
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
 simulate :: Int -> State -> State
 simulate steps state =
-    if steps <= 0 then state else ite halted state (simulate (steps-1) next)
-  where
-    halted = readArray (flags state) (flagId Halt)
-    next   = snd (transform executeInstruction state)
+    let halted = readArray (flags state) (flagId Halt)
+    in if steps <= 0
+       then state
+       else let future = snd (transform executeInstruction state)
+            in  ite halted state (simulate (steps-1) future)
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 The function~\hs{ite} here performs symbolic merging of two possible states:
@@ -329,28 +328,31 @@ will also perform merging on encounter of every branching instruction.
 In branching mode, on the contrary, we do not perform any merging at all and
 generate a rose tree shaped\footnote{As defined in the standard
 module~\cmd{Data.Tree} of Haskell's~\cmd{containers} package.} symbolic
-execution trace where every node stores an integer identifier, a program state
+execution trace where every node a program state
 and its associated path constraints. We take advantage of the fact that the
 semantics of the~\hs{halt} instruction updates the~\hs{Halt} flag with concrete
 boolean value~\hs{True} and thus we can use the native Haskell conditional
 operator to check if the current execution path has terminated and return a leaf
 node in this case. Otherwise, we generate~\hs{futures} --- a list of successor
-states, recursively calling the~\hs{simulate} function with every child as the
+states. Note that since no merging is performed, the branching instructions,
+such as \hs{jmpi_ct}, now generate two possible successor states.
+This semantics is captured by the \hs{executeInstructionBranching} function of type
+isomorphic to \hs{State}~\hs{->}~\hs{[State]}.
+We now recursively call the~\hs{simulate} function with every child as the
 initial state and attaching the results as leaves to the current node.
 
-\vspace{1mm}
+
 \begin{minted}[xleftmargin=10pt]{haskell}
-simulate :: Int -> State -> Tree State -- TODO: make the code work with this type
-simulate steps state = getTrace $ do
-    modify (+1)
-    n <- get
+simulate :: Int -> State -> Tree State
+simulate steps state =
     let halted = readArray (flags state) (flagId Halt)
-    if steps <= 0 || halted
-    then pure (mkTrace (Node n state) [])
-    else do futures <- traverse (simulate (steps-1)) (executeInstruction state)
-            pure (mkTrace (Node n state) futures)
+    in if steps <= 0 || halted
+       then pure (Node [])
+       else do futures <- traverse (simulate (steps-1))
+                                   (executeInstructionBranching state)
+               pure (Node state futures)
 \end{minted}
-\vspace{1mm}
+
 
 \noindent
 Symbolic simulation is very powerful. It allows us to formally verify properties
