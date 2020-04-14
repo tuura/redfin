@@ -289,13 +289,12 @@ unbounded loops whose termination depend on dynamic input data. We approach
 verification of the former using~\emph{symbolic execution with merging} that
 allows for whole-program verification by translating the program and the
 verification condition into a single SMT formula. However, unconditional merging
-does not work for non-terminating programs; thus
-we employ the traditional approach to symbolic execution that generates from programs
-the tree-shaped traces which could be split into separate execution paths for path-by-path
-analysis and verification. The verification framework thus works in two
-modes:~\emph{merging} and~\emph{branching}. See~\S\ref{sec-verification} for
-a verification example using the merging mode and~\S\ref{sec-motor-control} for
-an approach to verify a non-terminating program in branching mode.
+does not work for non-terminating programs.~To~verify those, we use an
+alternative approach to symbolic execution, which constructs tree-shaped traces
+with multiple execution paths that can be analysed and verified separately. The
+presented framework thus works in two modes --- \emph{merging} and
+\emph{branching} --- see examples in~\S\ref{sec-verification}
+and~\S\ref{sec-motor-control}, respectively.
 
 \subsubsection{Merging Mode}
 
@@ -303,8 +302,8 @@ The function \hs{simulate} takes a number of simulation steps~$N$ and an initial
 symbolic \hs{State} as input, and runs \hs{executeInstruction} defined above~$N$
 times. In each \hs{state} we merge two possible futures: (i) if the \hs{Halt}
 flag is set, we stop the simulation and remain in the current \hs{state},
-since in this case the processor must remain idle; (ii) otherwise we continue the
-simulation from the~\hs{future}~state.
+since in this case the processor must remain idle; (ii) otherwise we continue
+the simulation from the~\hs{future}~state.
 
 
 \begin{minted}[xleftmargin=10pt]{haskell}
@@ -319,57 +318,55 @@ simulate steps state =
 
 
 \noindent
-The function~\hs{ite} here performs symbolic merging of two possible states:
-where the halted flag is set and not. The underlying semantics of instructions
-will also perform merging on encounter of every branching instruction.
+The function~\hs{ite} performs symbolic merging of two possible next states,
+depending on whether the program has \hs{halted}. As we have seen, the semantics
+of individual instructions, as captured by \hs{executeInstruction}, also uses
+\hs{ite} to merge possible next states when encountering choices, thereby
+resulting in a linear simulation path.
 
 \subsubsection{Branching Mode}
 
-In branching mode, on the contrary, we do not perform any merging at all and
-generate a tree shaped symbolic
-execution trace where every node contains a program state
-and its associated ~\emph{path condition} --- a symbolic boolean expression which may
-refer to components of the state and encodes the choice taken during the simulation. This
-behaviour can be implemented by an instruction semantics function of the following
-type~\footnote{The branching instruction semantics is implemented in terms of a modification
-of the~\hs{Redfin} monad that is augmented with non-determinism and tracking of the
-path condition. We inline the modified definition for clarity.}:
+In the branching mode, on the contrary, we do not perform any merging at all and
+generate a tree of simulation paths where every node contains a program state
+with an associated~\emph{path condition} --- a symbolic Boolean expression
+that encodes the choices taken along the path leading to the node.
 
-\begin{minted}[xleftmargin=10pt]{haskell}
-executeInstruction :: (State, SymbolicValue Bool)
-                   -> [(State, SymbolicValue Bool)]
+To implement the branching semantics, we modify the~\hs{Redfin} monad by adding
+support for non-determinism and tracking of path conditions. While we omit
+the details, below we show how the types of the main simulation functions,
+\hs{executeInstruction} and \hs{simulate}, need to change. The former becomes a
+non-deterministic function that can return multiple next states:
+
+\begin{minted}[fontsize=\small,xleftmargin=10pt]{haskell}
+executeInstruction :: (State, SymbolicValue Bool) -> [(State, SymbolicValue Bool)]
 \end{minted}
 
 \noindent
-The instruction semantics becomes a non-deterministic function that can return multiple
-successor states. For example, it will return two states in
-case of the conditional jump instruction~\hs{jmpi_ct}: one with the jump performed
-and another with it skipped. The path condition,
-a value of type~\hs{SymbolicValue}~\hs{Bool},
-will be conjoined with the condition of the jump in the first case and with its negation
-in the second. For a more detailed explanation of how branching
-symbolic execution is performed, please refer to section~\ref{sec-motor-control}
-which describes a case study of verifying a non-terminating control program.
+For example, it will return two states in the case of the conditional jump
+instruction~\hs{jmpi_ct} instead of merging them with \hs{ite}. The path
+condition (of type~\hs{SymbolicValue}~\hs{Bool}) will be conjoined with the jump
+condition for the first returned state, and with its negation for the second.
 
-The modification of the~\hs{executeInstruction} function makes the type and semantics
-of~\hs{simulate} different too:
-\begin{minted}[xleftmargin=10pt]{haskell}
-simulate :: Int -> (State, SymbolicValue Bool)
-         -> Tree (State, SymbolicValue Bool)
+The type of~\hs{simulate} becomes more involved too. Since the semantics of
+individual instructions now produces multiple next states, the symbolic
+execution trace naturally grows into a tree:
+
+\begin{minted}[fontsize=\small,xleftmargin=10pt]{haskell}
+data Tree a = Node a [Tree a]
 \end{minted}
-Since every instruction semantics now produces a list of successor states, the symbolic
-execution trace naturally grows into a tree~\footnote{Even though the choice is binary for
-all current REDFIN instructions, we decided to reuse the well-tested~\hs{Data.Tree}
-Haskell library which implements the more general rose tree data structure. Here, we provide
-a simplified definition for reference:~\hs{data Tree a = Node a [Tree a]}.}.
-The simulation starts form an initial state with a path condition representing the
-precondition of the program, which can be instantiated with~\hs{true} if no
-precondition is imposed. Proceeding further, more states can stem from every successor
-state, until either a~\hs{halt} command is encountered or the maximum amount of simulation
-steps is reached.
+\begin{minted}[fontsize=\small,xleftmargin=10pt]{haskell}
+simulate :: Int -> (State, SymbolicValue Bool) -> Tree (State, SymbolicValue Bool)
+\end{minted}
+
+\noindent
+The simulation starts form an initial state with a path condition representing
+the precondition of the program, which can be instantiated with~\hs{true} if no
+precondition is imposed. Proceeding further, more successor states can stem from
+every state, until either the \hs{halt} instruction is encountered or the maximum
+number of simulation steps is reached.
 
 Symbolic simulation is very powerful. It allows us to formally verify properties
 of REDFIN programs by fixing some parts of the state to constant values (e.g.,
-the program), and then making assertions on the resulting values of
-the symbolic part of the state, as demonstrated in the
-sections~\S\ref{sec-verification} and~\S\ref{sec-motor-control}.
+the program), and then making assertions on the symbolic part of the resulting
+state, as demonstrated in sections~\S\ref{sec-verification}
+and~\S\ref{sec-motor-control}.
