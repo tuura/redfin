@@ -326,35 +326,48 @@ will also perform merging on encounter of every branching instruction.
 \subsubsection{Branching Mode}
 
 In branching mode, on the contrary, we do not perform any merging at all and
-generate a rose tree shaped\footnote{As defined in the standard
-module~\cmd{Data.Tree} of Haskell's~\cmd{containers} package.} symbolic
-execution trace where every node a program state
-and its associated path constraints. We take advantage of the fact that the
-semantics of the~\hs{halt} instruction updates the~\hs{Halt} flag with concrete
-boolean value~\hs{True} and thus we can use the native Haskell conditional
-operator to check if the current execution path has terminated and return a leaf
-node in this case. Otherwise, we generate~\hs{futures} --- a list of successor
-states. Note that since no merging is performed, the branching instructions,
-such as \hs{jmpi_ct}, now generate two possible successor states.
-This semantics is captured by the \hs{executeInstructionBranching} function of type
-isomorphic to \hs{State}~\hs{->}~\hs{[State]}.
-We now recursively call the~\hs{simulate} function with every child as the
-initial state and attaching the results as leaves to the current node.
-
+generate a tree shaped symbolic
+execution trace where every node contains a program state
+and its associated ~\emph{path condition} --- a symbolic boolean expression which may
+refer to components of the state and encodes the choice taken during the simulation. This
+behaviour can be implemented by an instruction semantics function of the following
+type~\footnote{The branching instruction semantics is implemented in terms of a modification
+of the~\hs{Redfin} monad that is augmented with non-determinism and tracking of the
+path condition. We inline the modified definition for clarity.}:
 
 \begin{minted}[xleftmargin=10pt]{haskell}
-simulate :: Int -> State -> Tree State
-simulate steps state =
-    let halted = readArray (flags state) (flagId Halt)
-    in if steps <= 0 || halted
-       then pure (Node [])
-       else do futures <- traverse (simulate (steps-1))
-                                   (executeInstructionBranching state)
-               pure (Node state futures)
+executeInstruction :: (State, SymbolicValue Bool)
+                   -> [(State, SymbolicValue Bool)]
 \end{minted}
 
-
 \noindent
+The instruction semantics becomes a non-deterministic function that can return multiple
+successor states. For example, it will return two states in
+case of the conditional jump instruction~\hs{jmpi_ct}: one with the jump performed
+and another with it skipped. The path condition,
+a value of type~\hs{SymbolicValue}~\hs{Bool},
+will be conjoined with the condition of the jump in the first case and with its negation
+in the second. For a more detailed explanation of how branching
+symbolic execution is performed, please refer to section~\ref{sec-motor-control}
+which describes a case study of verifying a non-terminating control program.
+
+The modification of the~\hs{executeInstruction} function makes the type and semantics
+of~\hs{simulate} different too:
+\begin{minted}[xleftmargin=10pt]{haskell}
+simulate :: Int -> (State, SymbolicValue Bool)
+         -> Tree (State, SymbolicValue Bool)
+\end{minted}
+Since every instruction semantics now produces a list of successor states, the symbolic
+execution trace naturally grows into a tree~\footnote{Even though the choice is binary for
+all current REDFIN instructions, we decided to reuse the well-tested~\hs{Data.Tree}
+Haskell library which implements the more general rose tree data structure. Here, we provide
+a simplified definition for reference:~\hs{data Tree a = Node a [Tree a]}.}.
+The simulation starts form an initial state with a path condition representing the
+precondition of the program, which can be instantiated with~\hs{true} if no
+precondition is imposed. Proceeding further, more states can stem from every successor
+state, until either a~\hs{halt} command is encountered or the maximum amount of simulation
+steps is reached.
+
 Symbolic simulation is very powerful. It allows us to formally verify properties
 of REDFIN programs by fixing some parts of the state to constant values (e.g.,
 the program), and then making assertions on the resulting values of
