@@ -52,7 +52,8 @@ library
                         ScopedTypeVariables
                         TupleSections
                         TypeFamilies
-    other-extensions:   BinaryLiterals
+                        DataKinds
+                        BinaryLiterals
                         DeriveFunctor
     GHC-options:        -O2 -Wall -fwarn-tabs
                         -fno-warn-unused-local-binds

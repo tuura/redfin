@@ -10,29 +10,31 @@
 -- Semantics of REDFIN instructions.
 --
 -----------------------------------------------------------------------------
-module Redfin.Semantics (
-    -- * Arithmetic instructions
-    add, add_si, sub, sub_si, mul, mul_si, div, div_si,
-    fadd, fsub, fmul, fdiv,
-    abs,
+module Redfin.Semantics
+  -- (
+  --   -- * Arithmetic instructions
+  --   add, add_si, sub, sub_si, mul, mul_si, div, div_si,
+  --   fadd, fsub, fmul, fdiv,
+  --   abs,
 
-    -- * Logical bit-wise instructions
-    Redfin.Semantics.and, Redfin.Semantics.or,
-    Redfin.Semantics.xor, Redfin.Semantics.not,
-    sl, sl_i, sr, sr_i, sra, sra_i,
+  --   -- * Logical bit-wise instructions
+  --   Redfin.Semantics.and, Redfin.Semantics.or,
+  --   Redfin.Semantics.xor, Redfin.Semantics.not,
+  --   sl, sl_i, sr, sr_i, sra, sra_i,
 
-    -- * Load/store instructions
-    ld, ld_i, ld_si, ldmi, st, stmi,
+  --   -- * Load/store instructions
+  --   ld, ld_i, ld_si, ldmi, st, stmi,
 
-    -- * Comparison instructions
-    cmpeq, cmplt, cmpgt,
+  --   -- * Comparison instructions
+  --   cmpeq, cmplt, cmpgt,
 
-    -- * Jump instructions
-    jmpi, jmpi_ct, jmpi_cf,
+  --   -- * Jump instructions
+  --   jmpi, jmpi_ct, jmpi_cf,
 
-    -- * Miscellaneous instructions
-    wait, halt
-    ) where
+  --   -- * Miscellaneous instructions
+  --   wait, halt
+  --   ) where
+  where
 
 import           Control.Monad.Extra
 import           Data.Bits           hiding (xor)
@@ -41,8 +43,9 @@ import           Data.SBV
 import           Prelude             hiding (abs, div, not)
 import qualified Prelude             (abs)
 
-import           Redfin
+-- import           Redfin
 import           Redfin.Data.Fixed
+import           Redfin.Types
 
 -- | A convenient combinator for defining instructions that fit the pattern
 -- @res = arg1 op arg2@, e.g. addition @rX = rX + [dmemaddr]@ can be defined as:
@@ -54,20 +57,24 @@ import           Redfin.Data.Fixed
     y <- arg2
     res $ x `op` y
 
-pad :: Int -> [SBool]
-pad k = replicate k sFalse
+-- pad :: Int -> [SBool]
+-- pad k = replicate k sFalse
+
+-- fromSImm8 :: SImm8 -> Value
+-- fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
 
 fromSImm8 :: SImm8 -> Value
-fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
+fromSImm8 = signExtend
 
+-- | TODO: use type-safe conversion
 fromSImm10 :: SImm10 -> InstructionAddress
 fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
 
-fromUImm8 :: UImm8 -> Value
-fromUImm8 u = fromBitsLE $ blastLE u ++ pad 56
+-- fromUImm8 :: UImm8 -> Value
+-- fromUImm8 u = fromBitsLE $ blastLE u ++ pad 56
 
-fromUImm10 :: UImm10 -> Value
-fromUImm10 u = fromBitsLE $ (take 10 $ blastLE u) ++ pad 54
+-- fromUImm10 :: UImm10 -> Value
+-- fromUImm10 u = fromBitsLE $ (take 10 $ blastLE u) ++ pad 54
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 add :: Register -> MemoryAddress -> Redfin ()
@@ -169,37 +176,37 @@ div_si rX simm = do
     writeState $ ite overflow overflowState state
     writeRegister rX (sDiv arg1 arg2)
 
--- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
---   TODO: overflow handling.
-fadd :: Register -> MemoryAddress -> Redfin ()
-fadd rX dmemaddr = do
-    arg1 <- Fixed <$> readRegister rX
-    arg2 <- Fixed <$> readMemory dmemaddr
-    writeRegister rX (getFixed $ arg1 + arg2)
+-- -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
+-- --   TODO: overflow handling.
+-- fadd :: Register -> MemoryAddress -> Redfin ()
+-- fadd rX dmemaddr = do
+--     arg1 <- Fixed <$> readRegister rX
+--     arg2 <- Fixed <$> readMemory dmemaddr
+--     writeRegister rX (getFixed $ arg1 + arg2)
 
--- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
---   TODO: overflow handling.
-fsub :: Register -> MemoryAddress -> Redfin ()
-fsub rX dmemaddr = do
-    arg1 <- Fixed <$> readRegister rX
-    arg2 <- Fixed <$> readMemory dmemaddr
-    writeRegister rX (getFixed $ arg1 - arg2)
+-- -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
+-- --   TODO: overflow handling.
+-- fsub :: Register -> MemoryAddress -> Redfin ()
+-- fsub rX dmemaddr = do
+--     arg1 <- Fixed <$> readRegister rX
+--     arg2 <- Fixed <$> readMemory dmemaddr
+--     writeRegister rX (getFixed $ arg1 - arg2)
 
--- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
---   TODO: overflow handling.
-fmul :: Register -> MemoryAddress -> Redfin ()
-fmul rX dmemaddr = do
-    arg1 <- Fixed <$> readRegister rX
-    arg2 <- Fixed <$> readMemory dmemaddr
-    writeRegister rX (getFixed $ arg1 * arg2)
+-- -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
+-- --   TODO: overflow handling.
+-- fmul :: Register -> MemoryAddress -> Redfin ()
+-- fmul rX dmemaddr = do
+--     arg1 <- Fixed <$> readRegister rX
+--     arg2 <- Fixed <$> readMemory dmemaddr
+--     writeRegister rX (getFixed $ arg1 * arg2)
 
--- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
---   TODO: overflow handling.
-fdiv :: Register -> MemoryAddress -> Redfin ()
-fdiv rX dmemaddr = do
-    arg1 <- Fixed <$> readRegister rX
-    arg2 <- Fixed <$> readMemory dmemaddr
-    writeRegister rX (getFixed $ arg1 / arg2)
+-- -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
+-- --   TODO: overflow handling.
+-- fdiv :: Register -> MemoryAddress -> Redfin ()
+-- fdiv rX dmemaddr = do
+--     arg1 <- Fixed <$> readRegister rX
+--     arg2 <- Fixed <$> readMemory dmemaddr
+--     writeRegister rX (getFixed $ arg1 / arg2)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
 and :: Register -> MemoryAddress -> Redfin ()
@@ -232,7 +239,7 @@ sl rX dmemaddr = writeRegister rX <~ (readRegister rX, sShiftLeft, readMemory dm
 
 -- | Instruction @sl_i rX, uimm@ is implemented as @rX = rX << uimm@.
 sl_i :: Register -> UImm8 -> Redfin ()
-sl_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftLeft, pure $ fromUImm8 uimm)
+sl_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftLeft, pure uimm)
 
 -- | Instruction @sr rX, dmemaddr@ is implemented as @rX = rX >> [dmemaddr]@.
 sr :: Register -> MemoryAddress -> Redfin ()
@@ -240,7 +247,7 @@ sr rX dmemaddr = writeRegister rX <~ (readRegister rX, sShiftRight, readMemory d
 
 -- | Instruction @sr_i rX, uimm@ is implemented as @rX = rX >> uimm@.
 sr_i :: Register -> UImm8 -> Redfin ()
-sr_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftRight, pure $ fromUImm8 uimm)
+sr_i rX uimm = writeRegister rX <~ (readRegister rX, sShiftRight, pure uimm)
 
 -- | Instruction @sra rX, dmemaddr@ is implemented as @rX = (int)rX >> [dmemaddr]@.
 sra :: Register -> MemoryAddress -> Redfin ()
@@ -248,7 +255,7 @@ sra rX dmemaddr = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, 
 
 -- | Instruction @sra_i rX, uimm@ is implemented as @rX = (int)rX >> uimm@.
 sra_i :: Register -> UImm8 -> Redfin ()
-sra_i rX uimm = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, pure $ uimm)
+sra_i rX uimm = writeRegister rX <~ (readRegister rX, sSignedShiftArithRight, pure uimm)
 
 -- | Instruction @cmpeq rX, dmemaddr@ is implemented as @cond = (rX == [dmemaddr])@.
 cmpeq :: Register -> MemoryAddress -> Redfin ()
@@ -264,11 +271,11 @@ cmpgt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (.>), readMemory dm
 
 -- | Instruction @ld_si rX, simm@ is implemented as @rx = (int)simm@.
 ld_si :: Register -> SImm8 -> Redfin ()
-ld_si rX simm = writeRegister rX $ fromSImm8 simm
+ld_si rX simm = writeRegister rX (fromSImm8 simm)
 
--- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
-ld_i :: Register -> UImm8 -> Redfin ()
-ld_i rX uimm = writeRegister rX (fromUImm8 uimm)
+-- -- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
+-- ld_i :: Register -> UImm8 -> Redfin ()
+-- ld_i rX uimm = writeRegister rX (fromUImm8 uimm)
 
 -- | Instruction @ld rX, dmemaddr@ is implemented as @rx = [dmemaddr]@.
 ld :: Register -> MemoryAddress -> Redfin ()

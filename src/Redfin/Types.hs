@@ -1,19 +1,7 @@
-{-# LANGUAGE DeriveFunctor #-}
------------------------------------------------------------------------------
--- |
--- Module      :  Redfin
--- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2017-2020
---
--- Maintainer  :  mail@geo2a.info
--- Stability   :  experimental
---
--- REDFIN sequencer (verification backend).
---
------------------------------------------------------------------------------
-module Redfin (
+module Redfin.Types (
     -- * Data types
     Value,
-    UImm5, UImm8, UImm10, SImm8, SImm10,
+    UImm8, UImm10, SImm8, SImm10,
     Register, RegisterBank,
     MemoryAddress, Memory,
     InstructionAddress, InstructionCode, Opcode, Program,
@@ -37,56 +25,56 @@ module Redfin (
 import           Control.Monad
 import           Data.SBV
 
+type SymbolicValue = SBV
+
+type SymbolicArray = SFunArray
+
 -- | The 'Value' datatype represents data values in Redfin. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
-type Value = SInt64
-
--- | The 'UImm5' datatype represents 5-bit unsigned immediate arguments that are
--- used by the 'Redfin.Semantics.pmac' instruction.
-type UImm5 = SWord8
+type Value = SymbolicValue (IntN 64)
 
 -- | The 'UImm8' datatype represents 8-bit unsigned immediate arguments that are
 -- used by many Redfin instructions with immediate addressing mode.
-type UImm8 = SWord8
+type UImm8 = SymbolicValue (WordN 8)
 
 -- | The 'UImm10' datatype represents 10-bit unsigned immediate arguments that
 -- are used by the 'Redfin.Semantics.wait' instruction.
-type UImm10 = SWord16
+type UImm10 = SymbolicValue (WordN 10)
 
 -- | The 'SImm8' datatype represents 8-bit signed immediate arguments that are
 -- used by many Redfin instructions with immediate addressing mode.
-type SImm8 = SInt8
+type SImm8 = SymbolicValue (IntN 8)
 
 -- | The 'SImm10' datatype represents 10-bit signed immediate arguments that are
 -- used for specifying the relative jump address, e.g. in
 -- 'Redfin.Semantics.jmpi' instruction.
-type SImm10 = SInt16
+type SImm10 = SymbolicValue (IntN 10)
 
 -- | Redfin has 4 general-purpose registers.
-type Register = SWord8
+type Register = SymbolicValue (WordN 2)
 
 -- | The register bank is represented by a map from registers to their values.
-type RegisterBank = SFunArray Word8 Int64
+type RegisterBank = SymbolicArray (WordN 2) (IntN 64)
 
 -- | Redfin memory can hold 256 values.
-type MemoryAddress = SWord8
+type MemoryAddress = SymbolicValue (WordN 8)
 
 -- | The memory is represented by a map from memory addresses to their values.
-type Memory = SFunArray Word8 Int64
+type Memory = SymbolicArray (WordN 8) (IntN 64)
 
 -- | Programs are stored in program memory (currently, up to 1024 instructions).
-type InstructionAddress = SWord16
+type InstructionAddress = SymbolicValue (WordN 12)
 
 -- | Instructions have 16-bit codes.
-type InstructionCode = SWord16
+type InstructionCode = SymbolicValue (WordN 16)
 
 -- | 'Opcode' is the leading 6-bit part of the 'InstructionCode', which
 -- determines the instruction. The remaining 10 bits of the 'InstructionCode'
 -- are used to specify immediate instruction arguments.
-type Opcode = SWord8
+type Opcode = SymbolicValue (WordN 6)
 
 -- | The program is represented by a map from instruction addresses to codes.
-type Program = SFunArray Word16 Word16
+type Program = SymbolicArray (WordN 12) (WordN 16)
 
 -- | Boolean 'Flag's indicate the current status of Redfin.
 data Flag = Condition
@@ -111,15 +99,15 @@ data Flag = Condition
           -- ^ Set when arithmetic overflow occurs.
           deriving (Bounded, Enum, Eq, Ord, Show)
 
-flagId :: Flag -> SWord8
+flagId :: Flag -> SymbolicValue (WordN 4)
 flagId = literal . fromIntegral . fromEnum
 
 -- | The state of flags is represented by a map from flags to their values.
-type Flags = SFunArray Word8 Bool
+type Flags = SymbolicArray (WordN 4) Bool
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
 -- effect of the 'Redfin.Semantics.wait' instruction.
-type Clock = SWord64
+type Clock = SymbolicValue (WordN 64)
 
 -- | The 'State' of Redfin is fully characterised by the contents of the register
 -- bank, instruction counter, flags, memory and program. The latter is assumed
@@ -215,7 +203,7 @@ writeMemory address value = do
 
 -- | Convert a 'Value' to the symbolic memory address. If the value needs to be
 -- truncated, the 'OutOfMemory' flag is set.
-toMemoryAddress :: Value -> Redfin SWord8
+toMemoryAddress :: Value -> Redfin MemoryAddress
 toMemoryAddress value = do
     let valid = value .< 256
     transformState $ \s -> ite valid s (snd $ redfin (writeFlag OutOfMemory sTrue) s)

@@ -1,7 +1,0 @@
-packages:
-- '.'
-resolver: lts-14.26
-extra-deps:
-- units-2.4.1.1
-- units-defs-2.1.0.1
-- units-parser-0.1.1
