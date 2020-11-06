@@ -23,15 +23,15 @@ module Redfin.Data.Fixed (
   unsafeValueToFixed, unsafeFixedToValue
   ) where
 
-import Test.QuickCheck.Arbitrary (Arbitrary)
-import Data.SBV
-import Redfin (Value)
+import           Data.SBV
+import           Redfin.Types
+import           Test.QuickCheck.Arbitrary (Arbitrary)
 
 -- | Symbolic fixed-point numbers implemented on top of 'type Value = Data.SBV.SInt64'.
 newtype Fixed = Fixed { getFixed :: Value }
-    deriving (Bounded, EqSymbolic, Mergeable, OrdSymbolic, Arbitrary)
+    deriving (Bounded, EqSymbolic, Mergeable, OrdSymbolic)
 
-fracBits :: Word8
+fracBits :: WordN 8
 fracBits = 8
 
 -- | Num instance is strait-forward, the only tricky part is multiplication,
@@ -72,7 +72,7 @@ unsafeFixedToValue (Fixed x) =
 fromFixed :: Fixed -> Double
 fromFixed (Fixed f) =
     case unliteral f of
-        Just x -> fromIntegral x / (2 ^ fracBits)
+        Just x  -> fromIntegral x / (2 ^ fracBits)
         Nothing -> error "fromFixed: non-literal value."
 
 -- | Convert from a 'Double' to a 'Fixed' precision value

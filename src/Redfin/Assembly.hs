@@ -49,7 +49,7 @@ import           Data.Maybe          (fromJust)
 import           Data.SBV            hiding (label)
 import           Prelude             hiding (abs, and, div, not, or)
 
-import           Redfin              hiding (State, instructionCounter, program)
+import           Redfin.Types        hiding (State, instructionCounter, program)
 
 type Labels = Map.Map String InstructionAddress
 
@@ -185,9 +185,6 @@ wait    uimm = write 0b110011 (uimm10 uimm)
 not rX = write 0b111000 (register rX)
 abs rX = write 0b111001 (register rX)
 halt   = write 0b000000 0
-
-pad :: Int -> [SBool]
-pad k = replicate k sFalse
 
 opcode :: Opcode -> InstructionCode
 opcode o = fromBitsLE $ pad 10 ++ (take 6 $ blastLE o)

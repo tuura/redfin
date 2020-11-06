@@ -18,8 +18,8 @@ module Redfin.Decode (
     ) where
 import           Data.SBV
 
-import           Redfin
 import qualified Redfin.Semantics as S
+import           Redfin.Types
 
 -- | Execute the instruction pointed to by the instruction counter, performing
 -- the following steps in sequence:
@@ -86,9 +86,6 @@ decodeAndExecute code =
          Just 0b111001 -> S.abs   register
          Just 0b000000 -> S.halt
          _             -> writeFlag IllegalInstruction sTrue
-
-pad :: Int -> [SBool]
-pad k = replicate k sFalse
 
 decodeOpcode :: InstructionCode -> Opcode
 decodeOpcode c = fromBitsLE $ (drop 10 $ blastLE c) ++ pad 2

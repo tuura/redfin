@@ -1,4 +1,6 @@
-{-# LANGUAGE DataKinds, FlexibleInstances, GADTs #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -----------------------------------------------------------------------------
 -- |
@@ -22,14 +24,14 @@ module Redfin.Language.Expression (
     Expression (..), compile
     )where
 
-import Data.SBV
-import Prelude hiding (and, div, not, or, abs, read)
+import           Data.SBV
+import           Prelude           hiding (abs, and, div, not, or, read)
 
-import qualified Prelude (abs, div)
+import qualified Prelude           (abs, div)
 
-import Redfin
-import Redfin.Assembly
+import           Redfin.Assembly
 import qualified Redfin.Data.Fixed as Fixed
+import           Redfin.Types
 
 -- | We distinguish between fixed-point and integer values
 data ValueType = FPType | IntType

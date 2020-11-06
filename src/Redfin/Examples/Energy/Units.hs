@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds, TypeOperators #-}
+{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TypeOperators #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Examples.Energy.Units
@@ -29,15 +30,15 @@ module Redfin.Examples.Energy.Units (
         toMilliSeconds, toMilliWatts, absU
     ) where
 
-import Data.Metrology.Poly
-import Data.Metrology.SI ()  -- DefaultLCSU instances
+import           Data.Metrology.Poly
+import           Data.Metrology.Show
+import           Data.Metrology.SI           ()
 import qualified Data.Metrology.SI.PolyTypes as SI
-import Data.Units.SI
-import Data.Units.SI.Prefixes
-import Data.Metrology.Show
-import Data.Metrology.Unsafe
-import Redfin.Data.Fixed
-import Redfin
+import           Data.Metrology.Unsafe
+import           Data.Units.SI
+import           Data.Units.SI.Prefixes
+import           Redfin.Data.Fixed
+import           Redfin.Types
 
 absU :: Num n => Qu d1 l n -> Qu d1 l n
 absU (Qu a) = Qu (abs a)

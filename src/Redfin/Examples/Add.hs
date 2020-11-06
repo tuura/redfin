@@ -14,7 +14,6 @@ module Redfin.Examples.Add where
 
 import           Data.SBV                     hiding (( # ), (%))
 import           Prelude                      hiding (read)
-import           Redfin
 import           Redfin.Assembly              hiding (abs, div)
 import qualified Redfin.Assembly              as Assembly
 import           Redfin.Data.Fixed
@@ -23,6 +22,7 @@ import           Redfin.Examples.Energy.Units
 import           Redfin.Language.Expression
 import           Redfin.Listing
 import           Redfin.Simulate
+import           Redfin.Types
 import           Text.Pretty.Simple           (pPrint)
 
 addHaskell :: Integral a => a -> a -> a

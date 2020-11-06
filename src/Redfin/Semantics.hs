@@ -57,24 +57,6 @@ import           Redfin.Types
     y <- arg2
     res $ x `op` y
 
--- pad :: Int -> [SBool]
--- pad k = replicate k sFalse
-
--- fromSImm8 :: SImm8 -> Value
--- fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
-
-fromSImm8 :: SImm8 -> Value
-fromSImm8 = signExtend
-
--- | TODO: use type-safe conversion
-fromSImm10 :: SImm10 -> InstructionAddress
-fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
-
--- fromUImm8 :: UImm8 -> Value
--- fromUImm8 u = fromBitsLE $ blastLE u ++ pad 56
-
--- fromUImm10 :: UImm10 -> Value
--- fromUImm10 u = fromBitsLE $ (take 10 $ blastLE u) ++ pad 54
 
 -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
 add :: Register -> MemoryAddress -> Redfin ()
@@ -176,37 +158,37 @@ div_si rX simm = do
     writeState $ ite overflow overflowState state
     writeRegister rX (sDiv arg1 arg2)
 
--- -- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
--- --   TODO: overflow handling.
--- fadd :: Register -> MemoryAddress -> Redfin ()
--- fadd rX dmemaddr = do
---     arg1 <- Fixed <$> readRegister rX
---     arg2 <- Fixed <$> readMemory dmemaddr
---     writeRegister rX (getFixed $ arg1 + arg2)
+-- | Instruction @add rX, dmemaddr@ is implemented as @rX = rX + [dmemaddr]@.
+--   TODO: overflow handling.
+fadd :: Register -> MemoryAddress -> Redfin ()
+fadd rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 + arg2)
 
--- -- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
--- --   TODO: overflow handling.
--- fsub :: Register -> MemoryAddress -> Redfin ()
--- fsub rX dmemaddr = do
---     arg1 <- Fixed <$> readRegister rX
---     arg2 <- Fixed <$> readMemory dmemaddr
---     writeRegister rX (getFixed $ arg1 - arg2)
+-- | Instruction @sub rX, dmemaddr@ is implemented as @rX = rX - [dmemaddr]@.
+--   TODO: overflow handling.
+fsub :: Register -> MemoryAddress -> Redfin ()
+fsub rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 - arg2)
 
--- -- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
--- --   TODO: overflow handling.
--- fmul :: Register -> MemoryAddress -> Redfin ()
--- fmul rX dmemaddr = do
---     arg1 <- Fixed <$> readRegister rX
---     arg2 <- Fixed <$> readMemory dmemaddr
---     writeRegister rX (getFixed $ arg1 * arg2)
+-- | Instruction @mul rX, dmemaddr@ is implemented as @rX = rX * [dmemaddr]@.
+--   TODO: overflow handling.
+fmul :: Register -> MemoryAddress -> Redfin ()
+fmul rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 * arg2)
 
--- -- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
--- --   TODO: overflow handling.
--- fdiv :: Register -> MemoryAddress -> Redfin ()
--- fdiv rX dmemaddr = do
---     arg1 <- Fixed <$> readRegister rX
---     arg2 <- Fixed <$> readMemory dmemaddr
---     writeRegister rX (getFixed $ arg1 / arg2)
+-- | Instruction @div rX, dmemaddr@ is implemented as @rX = rX / [dmemaddr]@.
+--   TODO: overflow handling.
+fdiv :: Register -> MemoryAddress -> Redfin ()
+fdiv rX dmemaddr = do
+    arg1 <- Fixed <$> readRegister rX
+    arg2 <- Fixed <$> readMemory dmemaddr
+    writeRegister rX (getFixed $ arg1 / arg2)
 
 -- | Instruction @and rX, dmemaddr@ is implemented as @rX = rX & [dmemaddr]@.
 and :: Register -> MemoryAddress -> Redfin ()
@@ -273,9 +255,9 @@ cmpgt rX dmemaddr = writeFlag Condition <~ (readRegister rX, (.>), readMemory dm
 ld_si :: Register -> SImm8 -> Redfin ()
 ld_si rX simm = writeRegister rX (fromSImm8 simm)
 
--- -- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
--- ld_i :: Register -> UImm8 -> Redfin ()
--- ld_i rX uimm = writeRegister rX (fromUImm8 uimm)
+-- | Instruction @ld_i rX, uimm@ is implemented as @rx = uimm@.
+ld_i :: Register -> UImm8 -> Redfin ()
+ld_i rX uimm = writeRegister rX (fromUImm8 uimm)
 
 -- | Instruction @ld rX, dmemaddr@ is implemented as @rx = [dmemaddr]@.
 ld :: Register -> MemoryAddress -> Redfin ()

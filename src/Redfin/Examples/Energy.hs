@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Redfin.Examples.Energy (
@@ -8,8 +9,8 @@ module Redfin.Examples.Energy (
 
 import           Control.Monad.IO.Class       (liftIO)
 import           Data.SBV                     hiding (( # ), (%))
+import           GHC.TypeNats
 import           Prelude                      hiding (read)
-import           Redfin
 import           Redfin.Assembly              hiding (abs, div)
 import qualified Redfin.Assembly              as Assembly
 import           Redfin.Data.Fixed
@@ -18,6 +19,7 @@ import           Redfin.Examples.Energy.Units
 import           Redfin.Language.Expression
 import           Redfin.Listing
 import           Redfin.Simulate
+import           Redfin.Types
 import           Text.Pretty.Simple           (pPrint)
 
 energyEstimate :: Integral a => a -> a -> a -> a -> a
@@ -159,13 +161,13 @@ correct src = do
 
 -- An alternative to defining these orphan instances is to switch to SBV's type
 -- class SDivisible instead. Even better is to fix Haskell's class hierarchy.
-instance Integral (SBV Int64) where
+instance (KnownNat n, IsNonZero n) => Integral (SBV (IntN n)) where
     div       = sDiv
     quotRem   = error "quotRem is not implemented for SBV Int64"
     toInteger = error "quotRem cannot be implemented for SBV Int64"
 
-instance Ord (SBV Int64) where
+instance (KnownNat n, IsNonZero n) => Ord (SBV (IntN n)) where
     compare = error "Ord cannot be implemented for SBV Int64"
 
-instance Real (SBV Int64) where
+instance (KnownNat n, IsNonZero n) => Real (SBV (IntN n)) where
     toRational = error "Real cannot be implemented for SBV Int64"

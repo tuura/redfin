@@ -2,13 +2,13 @@ module Redfin.Examples.ManhattanDistance where
 
 import           Data.SBV
 import           Prelude                    hiding (read)
-import           Redfin
 import           Redfin.Assembly            hiding (abs, div)
 import qualified Redfin.Assembly            as Assembly
 import           Redfin.Examples.Common
 import           Redfin.Language.Expression
 import           Redfin.Listing
 import           Redfin.Simulate
+import           Redfin.Types
 import           Text.Pretty.Simple         (pPrint)
 
 -- | Do we really need more than 4 dimensions?

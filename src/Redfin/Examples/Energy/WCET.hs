@@ -4,13 +4,13 @@ import           Data.SBV
 import           Prelude                    hiding (read)
 import           Text.Pretty.Simple         (pPrint)
 
-import           Redfin
 import           Redfin.Assembly            hiding (abs, div)
 import qualified Redfin.Assembly            as Assembly
 import           Redfin.Examples.Common
 import           Redfin.Examples.Energy
 import           Redfin.Language.Expression
 import           Redfin.Simulate
+import           Redfin.Types
 
 worstCaseClock :: IO OptimizeResult
 worstCaseClock = optimize Lexicographic $ do

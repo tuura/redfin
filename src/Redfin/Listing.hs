@@ -18,9 +18,9 @@ module Redfin.Listing (
 
 import qualified Data.SBV           as SBV
 import qualified Data.Text.Lazy     as T
-import           Redfin
 import           Redfin.Assembly
 import           Redfin.Decode
+import           Redfin.Types
 import           Text.Pretty.Simple (pPrint)
 
 -- | Pretty-print a 'Script' to stdout.

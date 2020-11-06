@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Redfin.Types (
     -- * Data types
     Value,
@@ -10,7 +12,11 @@ module Redfin.Types (
     State (..),
 
     -- * Conversion between data types
-    toMemoryAddress,
+    toMemoryAddress, pad,
+    fromSImm8,
+    fromSImm10,
+    fromUImm8,
+    fromUImm10,
 
     -- * Redfin state transformer
     Redfin (..), transformState, readState, writeState,
@@ -23,6 +29,7 @@ module Redfin.Types (
     ) where
 
 import           Control.Monad
+import           Data.Proxy
 import           Data.SBV
 
 type SymbolicValue = SBV
@@ -63,7 +70,7 @@ type MemoryAddress = SymbolicValue (WordN 8)
 type Memory = SymbolicArray (WordN 8) (IntN 64)
 
 -- | Programs are stored in program memory (currently, up to 1024 instructions).
-type InstructionAddress = SymbolicValue (WordN 12)
+type InstructionAddress = SymbolicValue (WordN 10)
 
 -- | Instructions have 16-bit codes.
 type InstructionCode = SymbolicValue (WordN 16)
@@ -74,7 +81,7 @@ type InstructionCode = SymbolicValue (WordN 16)
 type Opcode = SymbolicValue (WordN 6)
 
 -- | The program is represented by a map from instruction addresses to codes.
-type Program = SymbolicArray (WordN 12) (WordN 16)
+type Program = SymbolicArray (WordN 10) (WordN 16)
 
 -- | Boolean 'Flag's indicate the current status of Redfin.
 data Flag = Condition
@@ -182,7 +189,8 @@ writeRegister register value =
     transformState $ \(State             rs                 ic ir fs m p c)
                     -> State (writeArray rs register value) ic ir fs m p c
 
--- | Lookup the 'Value' at the given 'MemoryAddress'. If the value has never been
+-- | Lookup the 'Value' at the given 'MemoryAddress'.
+-- If the value has never been
 -- initialised, this function returns 0, which is how the current hardware
 -- implementation works. To handle more general settings, it may also be useful
 -- to raise an error flag in this situation (future work). We assume that it
@@ -206,7 +214,8 @@ writeMemory address value = do
 toMemoryAddress :: Value -> Redfin MemoryAddress
 toMemoryAddress value = do
     let valid = value .< 256
-    transformState $ \s -> ite valid s (snd $ redfin (writeFlag OutOfMemory sTrue) s)
+    transformState $ \s ->
+      ite valid s (snd $ redfin (writeFlag OutOfMemory sTrue) s)
     return $ fromBitsLE (take 8 $ blastLE value)
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
@@ -254,3 +263,19 @@ writeInstructionRegister :: InstructionCode -> Redfin ()
 writeInstructionRegister instructionCode =
     transformState $ \(State rs ic _               fs m p c)
                     -> State rs ic instructionCode fs m p c
+
+--------------------------------------------------------------------------------
+pad :: Int -> [SBool]
+pad k = replicate k sFalse
+
+fromSImm8 :: SImm8 -> Value
+fromSImm8 = sFromIntegral
+
+fromSImm10 :: SImm10 -> InstructionAddress
+fromSImm10 = sFromIntegral
+
+fromUImm8 :: UImm8 -> Value
+fromUImm8 = sFromIntegral
+
+fromUImm10 :: UImm10 -> Value
+fromUImm10 = sFromIntegral

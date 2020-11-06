@@ -13,8 +13,8 @@ module Redfin.Simulate (simulate) where
 
 import           Data.SBV
 
-import           Redfin
 import           Redfin.Decode
+import           Redfin.Types
 
 simulate :: Int -> State -> State
 simulate steps state

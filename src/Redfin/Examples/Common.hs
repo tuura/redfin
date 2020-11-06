@@ -1,8 +1,8 @@
 module Redfin.Examples.Common where
 
 import           Data.SBV
-import           Redfin
 import           Redfin.Assembly
+import           Redfin.Types
 
 r0, r1, r2, r3 :: Register
 [r0, r1, r2, r3] = [0 .. 3]
@@ -22,7 +22,7 @@ mkMemory name inits = do
     blanks <- newArray name (Just . literal $ 0)
     pure $ foldr (\(k, v) arr -> writeArray arr k v) blanks inits
 
-dumpMemory :: Word8 -> Word8 -> Memory -> [(Int, Value)]
+dumpMemory :: WordN 8 -> WordN 8 -> Memory -> [(Int, Value)]
 dumpMemory from to m = filter ((/=0) . snd) $ zip [0 ..] $ map
     (readArray m)
     [literal from .. literal to]
