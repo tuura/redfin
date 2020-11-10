@@ -1,12 +1,13 @@
-{-# LANGUAGE BinaryLiterals #-}
-{-# LANGUAGE DeriveFunctor  #-}
+{-# LANGUAGE BinaryLiterals   #-}
+{-# LANGUAGE DeriveFunctor    #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Assembly
--- Copyright   :  (c) Andrey Mokhov 2017
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2017-2020
 --
--- Maintainer  :  andrey.mokhov@gmail.com
+-- Maintainer  :  mail@geo2a.info
 -- Stability   :  experimental
 --
 -- An embedded REDFIN assembly language.
@@ -43,7 +44,6 @@ module Redfin.Assembly (
 
 import           Control.Monad
 import           Control.Monad.State
--- import           Data.Bits           hiding (bit, xor)
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe          (fromJust)
 import           Data.SBV            hiding (label)
@@ -51,26 +51,26 @@ import           Prelude             hiding (abs, and, div, not, or)
 
 import           Redfin.Types        hiding (State, instructionCounter, program)
 
+-- | Table of labels is used for jumps
 type Labels = Map.Map String InstructionAddress
 
-data AssemblerState =
-    MkAssemblerState { program            :: [(InstructionAddress, InstructionCode)]
-                     , labels             :: Labels
-                     , instructionCounter :: InstructionAddress
-                     }
+data AssemblerState = MkAssemblerState
+  { program            :: [(InstructionAddress, InstructionCode)]
+  , labels             :: Labels
+  , instructionCounter :: InstructionAddress
+  }
 
 type Script = State AssemblerState ()
 
-type P = [InstructionCode]
-
 -- | An assembly writer monad.
 data Writer a = Writer
-    { runWriter :: P -> (a, P)
+    { runWriter :: [InstructionCode] -> (a, [InstructionCode])
     } deriving Functor
 
 instance Show a => Show (Writer a) where
     show s = show $ reverse $ snd $ runWriter s []
 
+-- | Find all labels in a script
 collectLabels :: Script -> Labels
 collectLabels src =
     labels $ snd $ runState src (MkAssemblerState [] Map.empty 0)
@@ -79,7 +79,8 @@ collectLabels src =
 machineCode :: Script -> [InstructionCode]
 machineCode src =
     let labels = collectLabels src
-    in map snd $ reverse $ program $ snd $ runState src (MkAssemblerState [] labels 0)
+    in map snd . reverse . program . snd $
+       runState src (MkAssemblerState [] labels 0)
 
 -- | Assemble an assembly script into a program
 assemble :: Script -> Symbolic Program
@@ -87,7 +88,7 @@ assemble src = do
   a0 <- newArray_ (Just 0)
   return $ foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
   where
-    prg    = machineCode src
+    prg = machineCode src
 
 -- | Declare a label in a program
 label :: String -> Script
@@ -135,77 +136,98 @@ goto_cf name = do
              let offset = there - here - 1
              jmpi_cf (fromIntegral . fromJust . unliteral $ offset)
 
-write :: Opcode -> InstructionCode -> Script
-write o c = do
+-- | Add an instruction into a script
+write :: InstructionCode -> Script
+write c = do
     s <- get
     let ic = instructionCounter s
-    put $ s { program = (ic, (opcode o .|. c)):program s
+    put $ s { program = (ic, c):program s
             , instructionCounter = ic + 1}
 
--- Instructions
-and   rX dmemaddr = write 0b000001 (register rX .|. address dmemaddr)
-or    rX dmemaddr = write 0b000010 (register rX .|. address dmemaddr)
-xor   rX dmemaddr = write 0b000011 (register rX .|. address dmemaddr)
-add   rX dmemaddr = write 0b000100 (register rX .|. address dmemaddr)
-sub   rX dmemaddr = write 0b000101 (register rX .|. address dmemaddr)
-mul   rX dmemaddr = write 0b000110 (register rX .|. address dmemaddr)
-div   rX dmemaddr = write 0b000111 (register rX .|. address dmemaddr)
-ld    rX dmemaddr = write 0b001000 (register rX .|. address dmemaddr)
-st    rX dmemaddr = write 0b001001 (register rX .|. address dmemaddr)
-ldmi  rX dmemaddr = write 0b001010 (register rX .|. address dmemaddr)
-stmi  rX dmemaddr = write 0b001011 (register rX .|. address dmemaddr)
-cmpeq rX dmemaddr = write 0b010001 (register rX .|. address dmemaddr)
-cmplt rX dmemaddr = write 0b010010 (register rX .|. address dmemaddr)
-cmpgt rX dmemaddr = write 0b010011 (register rX .|. address dmemaddr)
-sl    rX dmemaddr = write 0b011100 (register rX .|. address dmemaddr)
-sr    rX dmemaddr = write 0b011101 (register rX .|. address dmemaddr)
-sra   rX dmemaddr = write 0b011110 (register rX .|. address dmemaddr)
+-- | Add an instruction into a script
+instruction :: InstructionCode -> Script
+instruction c = do
+    s <- get
+    let ic = instructionCounter s
+    put $ s { program = (ic, c):program s
+            , instructionCounter = ic + 1}
 
-fadd   rX dmemaddr = write 0b001100 (register rX .|. address dmemaddr)
-fsub   rX dmemaddr = write 0b001101 (register rX .|. address dmemaddr)
-fmul   rX dmemaddr = write 0b001110 (register rX .|. address dmemaddr)
-fdiv   rX dmemaddr = write 0b001111 (register rX .|. address dmemaddr)
+opcode :: WordN 6 -> Opcode
+opcode = literal
 
-add_si rX simm = write 0b100000 (register rX .|. simm8 simm)
-sub_si rX simm = write 0b100001 (register rX .|. simm8 simm)
-mul_si rX simm = write 0b100010 (register rX .|. simm8 simm)
-div_si rX simm = write 0b100011 (register rX .|. simm8 simm)
-ld_si  rX simm = write 0b100111 (register rX .|. simm8 simm)
+-- | Arithmetic instructions
+add, sub, mul, div :: Register -> MemoryAddress -> Script
+add   rX dmemaddr = instruction (opcode 0b000100 # rX # dmemaddr)
+sub   rX dmemaddr = instruction (opcode 0b000101 # rX # dmemaddr)
+mul   rX dmemaddr = instruction (opcode 0b000110 # rX # dmemaddr)
+div   rX dmemaddr = instruction (opcode 0b000111 # rX # dmemaddr)
 
-sl_i   rX uimm = write 0b101100 (register rX .|. uimm8 uimm)
-sr_i   rX uimm = write 0b101101 (register rX .|. uimm8 uimm)
-sra_i  rX uimm = write 0b101110 (register rX .|. uimm8 uimm)
-ld_i   rX uimm = write 0b101111 (register rX .|. uimm8 uimm)
+abs :: Register -> Script
+abs rX = instruction (opcode 0b111001 # rX # 0)
 
-jmpi    simm = write 0b110000 (simm10 simm)
-jmpi_ct simm = write 0b110001 (simm10 simm)
-jmpi_cf simm = write 0b110010 (simm10 simm)
-wait    uimm = write 0b110011 (uimm10 uimm)
+-- | Arithmetic instructions with immediate arguments
+add_si, sub_si, mul_si, div_si :: Register -> SImm8 -> Script
+add_si rX simm = instruction (opcode 0b100000 # rX # fromSigned @8 simm)
+sub_si rX simm = instruction (opcode 0b100001 # rX # fromSigned @8 simm)
+mul_si rX simm = instruction (opcode 0b100010 # rX # fromSigned @8 simm)
+div_si rX simm = instruction (opcode 0b100011 # rX # fromSigned @8 simm)
 
-not rX = write 0b111000 (register rX)
-abs rX = write 0b111001 (register rX)
-halt   = write 0b000000 0
+-- | Fixed-pint arithmetic instructions
+fadd, fsub, fmul, fdiv :: Register -> MemoryAddress -> Script
+fadd   rX dmemaddr = instruction (opcode 0b001100 # rX # dmemaddr)
+fsub   rX dmemaddr = instruction (opcode 0b001101 # rX # dmemaddr)
+fmul   rX dmemaddr = instruction (opcode 0b001110 # rX # dmemaddr)
+fdiv   rX dmemaddr = instruction (opcode 0b001111 # rX # dmemaddr)
 
-opcode :: Opcode -> InstructionCode
-opcode o = fromBitsLE $ pad 10 ++ (take 6 $ blastLE o)
+-- | Logical bit-wise instructions
+and, or, xor :: Register -> MemoryAddress -> Script
+and   rX dmemaddr = instruction (opcode 0b000001 # rX # dmemaddr)
+or    rX dmemaddr = instruction (opcode 0b000010 # rX # dmemaddr)
+xor   rX dmemaddr = instruction (opcode 0b000011 # rX # dmemaddr)
 
-decodeOpcode :: InstructionCode -> Opcode
-decodeOpcode c = fromBitsLE $ (drop 10 $ blastLE c) ++ pad 2
+not :: Register -> Script
+not rX = instruction (opcode 0b111000 # rX # 0)
 
-register :: Register -> InstructionCode
-register r = fromBitsLE $ pad 8 ++ (take 2 $ blastLE r) ++ pad 6
+-- | Shifts
+sl, sr, sra :: Register -> MemoryAddress -> Script
+sl    rX dmemaddr = instruction (opcode 0b011100 # rX # dmemaddr)
+sr    rX dmemaddr = instruction (opcode 0b011101 # rX # dmemaddr)
+sra   rX dmemaddr = instruction (opcode 0b011110 # rX # dmemaddr)
 
-address :: MemoryAddress -> InstructionCode
-address a = fromBitsLE $ blastLE a ++ pad 8
+-- | Shifts with immediate arguments
+sl_i, sr_i, sra_i :: Register -> UImm8 -> Script
+sl_i   rX uimm = instruction (opcode 0b101100 # rX # uimm)
+sr_i   rX uimm = instruction (opcode 0b101101 # rX # uimm)
+sra_i  rX uimm = instruction (opcode 0b101110 # rX # uimm)
 
-simm8 :: SImm8 -> InstructionCode
-simm8 s = fromBitsLE $ blastLE s ++ pad 8
+-- | Load/store instructions
+ld, st, ldmi, stmi :: Register -> MemoryAddress -> Script
+ld    rX dmemaddr = instruction (opcode 0b001000 # rX # dmemaddr)
+st    rX dmemaddr = instruction (opcode 0b001001 # rX # dmemaddr)
+ldmi  rX dmemaddr = instruction (opcode 0b001010 # rX # dmemaddr)
+stmi  rX dmemaddr = instruction (opcode 0b001011 # rX # dmemaddr)
 
-simm10 :: SImm10 -> InstructionCode
-simm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ pad 6
+ld_i :: Register -> UImm8 -> Script
+ld_i rX uimm = instruction (opcode 0b101111 # rX # uimm)
 
-uimm8 :: UImm8 -> InstructionCode
-uimm8 u = fromBitsLE $ blastLE u ++ pad 8
+ld_si :: Register -> SImm8 -> Script
+ld_si  rX simm = instruction (opcode 0b100111 # rX # fromSigned @8 simm)
 
-uimm10 :: UImm10 -> InstructionCode
-uimm10 = fromBitsLE . blastLE
+-- | Comparison instructions
+cmpeq, cmplt, cmpgt :: Register -> MemoryAddress -> Script
+cmpeq rX dmemaddr = instruction (opcode 0b010001 # rX # dmemaddr)
+cmplt rX dmemaddr = instruction (opcode 0b010010 # rX # dmemaddr)
+cmpgt rX dmemaddr = instruction (opcode 0b010011 # rX # dmemaddr)
+
+-- | Jump instructions
+jmpi, jmpi_ct, jmpi_cf :: SImm10 -> Script
+jmpi    simm = instruction (opcode 0b110000 # fromSigned @10 simm)
+jmpi_ct simm = instruction (opcode 0b110001 # fromSigned @10 simm)
+jmpi_cf simm = instruction (opcode 0b110010 # fromSigned @10 simm)
+
+-- | Miscellaneous instructions
+wait :: UImm10 -> Script
+wait uimm = instruction $ 0b110011 # uimm
+
+halt :: Script
+halt = instruction 0

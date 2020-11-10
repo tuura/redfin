@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Redfin.Types (
     -- * Data types
     Value,
@@ -17,6 +15,8 @@ module Redfin.Types (
     fromSImm10,
     fromUImm8,
     fromUImm10,
+    fromSigned,
+    toSigned,
 
     -- * Redfin state transformer
     Redfin (..), transformState, readState, writeState,
@@ -31,6 +31,7 @@ module Redfin.Types (
 import           Control.Monad
 import           Data.Proxy
 import           Data.SBV
+import           GHC.TypeNats
 
 type SymbolicValue = SBV
 
@@ -279,3 +280,12 @@ fromUImm8 = sFromIntegral
 
 fromUImm10 :: UImm10 -> Value
 fromUImm10 = sFromIntegral
+
+-- | Convert a two's complement signed number into an unsigned word
+--   by "forgetting" that it's signed
+fromSigned :: (KnownNat n, IsNonZero n) => SBV (IntN n) -> SBV (WordN n)
+fromSigned = sFromIntegral
+
+-- | Interpret an unsigned word into a two's complement signed number
+toSigned :: (KnownNat n, IsNonZero n) => SBV (WordN n) -> SBV (IntN n)
+toSigned = sFromIntegral
