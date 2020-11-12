@@ -9,13 +9,15 @@
 -- REDFIN instruction set.
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE BinaryLiterals   #-}
+{-# LANGUAGE TypeApplications #-}
 module Redfin.Decode (
     executeInstruction,
 
     decodeOpcode, decodeRegister, decodeMemoryAddress, decodeSImm8,
     decodeSImm10, decodeUImm8, decodeUImm10
     ) where
+import           Data.Proxy
 import           Data.SBV
 
 import qualified Redfin.Semantics as S
@@ -38,6 +40,7 @@ executeInstruction = do
     incrementInstructionCounter
     decodeAndExecute =<< readInstructionRegister
 
+-- | Decode an instruction code and translate it into it's semantics
 decodeAndExecute :: InstructionCode -> Redfin ()
 decodeAndExecute code =
     let opcode       = decodeOpcode code
@@ -88,22 +91,22 @@ decodeAndExecute code =
          _             -> writeFlag IllegalInstruction sTrue
 
 decodeOpcode :: InstructionCode -> Opcode
-decodeOpcode c = fromBitsLE $ (drop 10 $ blastLE c) ++ pad 2
+decodeOpcode = bvTake (Proxy @6)
 
 decodeRegister :: InstructionCode -> Register
-decodeRegister c = fromBitsLE $ (take 2 $ drop 8 $ blastLE c) ++ pad 6
+decodeRegister = bvTake (Proxy @2) . bvDrop (Proxy @6)
 
 decodeMemoryAddress :: InstructionCode -> MemoryAddress
-decodeMemoryAddress c = fromBitsLE $ (take 8 $ blastLE c)
+decodeMemoryAddress = bvDrop (Proxy @8)
 
 decodeSImm8 :: InstructionCode -> SImm8
-decodeSImm8 c = fromBitsLE $ (take 8 $ blastLE c)
+decodeSImm8 = toSigned . bvTake (Proxy @8) . bvDrop (Proxy @6)
 
 decodeSImm10 :: InstructionCode -> SImm10
-decodeSImm10 c = fromBitsLE $ (take 10 $ blastLE c) ++ pad 6
+decodeSImm10 = toSigned . bvTake (Proxy @10) . bvDrop (Proxy @6)
 
 decodeUImm8 :: InstructionCode -> UImm8
-decodeUImm8 c = fromBitsLE $ (take 8 $ blastLE c)
+decodeUImm8 = bvTake (Proxy @8) . bvDrop (Proxy @6)
 
 decodeUImm10 :: InstructionCode -> UImm10
-decodeUImm10 c = fromBitsLE $ (take 10 $ blastLE c) ++ pad 6
+decodeUImm10 = bvTake (Proxy @10) . bvDrop (Proxy @6)
