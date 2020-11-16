@@ -20,6 +20,7 @@ module Redfin.Decode (
 import           Data.Proxy
 import           Data.SBV
 
+import           Redfin
 import qualified Redfin.Semantics as S
 import           Redfin.Types
 
@@ -100,13 +101,13 @@ decodeMemoryAddress :: InstructionCode -> MemoryAddress
 decodeMemoryAddress = bvDrop (Proxy @8)
 
 decodeSImm8 :: InstructionCode -> SImm8
-decodeSImm8 = toSigned . bvTake (Proxy @8) . bvDrop (Proxy @6)
+decodeSImm8 = toSigned . bvTake (Proxy @8) . bvDrop (Proxy @8)
 
 decodeSImm10 :: InstructionCode -> SImm10
 decodeSImm10 = toSigned . bvTake (Proxy @10) . bvDrop (Proxy @6)
 
 decodeUImm8 :: InstructionCode -> UImm8
-decodeUImm8 = bvTake (Proxy @8) . bvDrop (Proxy @6)
+decodeUImm8 = bvTake (Proxy @8) . bvDrop (Proxy @8)
 
 decodeUImm10 :: InstructionCode -> UImm10
 decodeUImm10 = bvTake (Proxy @10) . bvDrop (Proxy @6)

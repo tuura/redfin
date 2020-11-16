@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Semantics
@@ -10,31 +9,29 @@
 -- Semantics of REDFIN instructions.
 --
 -----------------------------------------------------------------------------
-module Redfin.Semantics
-  -- (
-  --   -- * Arithmetic instructions
-  --   add, add_si, sub, sub_si, mul, mul_si, div, div_si,
-  --   fadd, fsub, fmul, fdiv,
-  --   abs,
+module Redfin.Semantics (
+    -- * Arithmetic instructions
+    add, add_si, sub, sub_si, mul, mul_si, div, div_si,
+    fadd, fsub, fmul, fdiv,
+    abs,
 
-  --   -- * Logical bit-wise instructions
-  --   Redfin.Semantics.and, Redfin.Semantics.or,
-  --   Redfin.Semantics.xor, Redfin.Semantics.not,
-  --   sl, sl_i, sr, sr_i, sra, sra_i,
+    -- * Logical bit-wise instructions
+    Redfin.Semantics.and, Redfin.Semantics.or,
+    Redfin.Semantics.xor, Redfin.Semantics.not,
+    sl, sl_i, sr, sr_i, sra, sra_i,
 
-  --   -- * Load/store instructions
-  --   ld, ld_i, ld_si, ldmi, st, stmi,
+    -- * Load/store instructions
+    ld, ld_i, ld_si, ldmi, st, stmi,
 
-  --   -- * Comparison instructions
-  --   cmpeq, cmplt, cmpgt,
+    -- * Comparison instructions
+    cmpeq, cmplt, cmpgt,
 
-  --   -- * Jump instructions
-  --   jmpi, jmpi_ct, jmpi_cf,
+    -- * Jump instructions
+    jmpi, jmpi_ct, jmpi_cf,
 
-  --   -- * Miscellaneous instructions
-  --   wait, halt
-  --   ) where
-  where
+    -- * Miscellaneous instructions
+    wait, halt
+    ) where
 
 import           Control.Monad.Extra
 import           Data.Bits           hiding (xor)
@@ -43,7 +40,9 @@ import           Data.SBV
 import           Prelude             hiding (abs, div, not)
 import qualified Prelude             (abs)
 
--- import           Redfin
+import qualified Debug.Trace         as Debugger
+
+import           Redfin
 import           Redfin.Data.Fixed
 import           Redfin.Types
 

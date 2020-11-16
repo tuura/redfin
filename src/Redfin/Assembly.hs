@@ -46,8 +46,9 @@ import           Control.Monad
 import           Control.Monad.State
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe          (fromJust)
-import           Data.SBV            hiding (label)
+import           Data.SBV            hiding (SFunArray, SymArray (..), label)
 import           Prelude             hiding (abs, and, div, not, or)
+import           Redfin.SBV
 
 import           Redfin.Types        hiding (State, instructionCounter, program)
 
@@ -83,12 +84,8 @@ machineCode src =
        runState src (MkAssemblerState [] labels 0)
 
 -- | Assemble an assembly script into a program
-assemble :: Script -> Symbolic Program
-assemble src = do
-  a0 <- newArray_ (Just 0)
-  return $ foldr (\(c, p) a -> writeArray a p c) a0 (zip prg [0..])
-  where
-    prg = machineCode src
+assemble :: Script -> Program
+assemble src = sListArray 0 $ zip [0..] (machineCode src)
 
 -- | Declare a label in a program
 label :: String -> Script
@@ -136,13 +133,13 @@ goto_cf name = do
              let offset = there - here - 1
              jmpi_cf (fromIntegral . fromJust . unliteral $ offset)
 
--- | Add an instruction into a script
-write :: InstructionCode -> Script
-write c = do
-    s <- get
-    let ic = instructionCounter s
-    put $ s { program = (ic, c):program s
-            , instructionCounter = ic + 1}
+-- -- | Add an instruction into a script
+-- write :: InstructionCode -> Script
+-- write c = do
+--     s <- get
+--     let ic = instructionCounter s
+--     put $ s { program = (ic, c):program s
+--             , instructionCounter = ic + 1}
 
 -- | Add an instruction into a script
 instruction :: InstructionCode -> Script
@@ -211,7 +208,7 @@ ld_i :: Register -> UImm8 -> Script
 ld_i rX uimm = instruction (opcode 0b101111 # rX # uimm)
 
 ld_si :: Register -> SImm8 -> Script
-ld_si  rX simm = instruction (opcode 0b100111 # rX # fromSigned @8 simm)
+ld_si rX simm = instruction (opcode 0b100111 # rX # fromSigned @8 simm)
 
 -- | Comparison instructions
 cmpeq, cmplt, cmpgt :: Register -> MemoryAddress -> Script

@@ -8,7 +8,8 @@ module Redfin.Examples.Energy (
   ) where
 
 import           Control.Monad.IO.Class       (liftIO)
-import           Data.SBV                     hiding (( # ), (%))
+import           Data.SBV                     hiding (SFunArray, SymArray (..),
+                                               ( # ), (%))
 import           GHC.TypeNats
 import           Prelude                      hiding (read)
 import           Redfin.Assembly              hiding (abs, div)
@@ -18,6 +19,7 @@ import           Redfin.Examples.Common
 import           Redfin.Examples.Energy.Units
 import           Redfin.Language.Expression
 import           Redfin.Listing
+import           Redfin.SBV
 import           Redfin.Simulate
 import           Redfin.Types
 import           Text.Pretty.Simple           (pPrint)
@@ -73,14 +75,14 @@ equivalence = do
     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
-    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
     let steps = 100
-    emptyRegs <- mkRegisters "registers" []
-    emptyFlags <- mkFlags "flags" []
-    progLowLevel <- assemble energyEstimateLowLevel
-    progHighLevel <- assemble energyEstimateHighLevel
-    let finalStateLL = simulate steps $ boot progLowLevel emptyRegs mem emptyFlags
-        finalStateHL = simulate steps $ boot progHighLevel emptyRegs mem emptyFlags
+        mem = mkMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+    let progLL = assemble energyEstimateLowLevel
+        progHL = assemble energyEstimateHighLevel
+    let initialStateLL = boot progLL defaultRegisters mem defaultFlags
+        initialStateHL = boot progHL defaultRegisters mem defaultFlags
+    let finalStateLL = simulate steps initialStateLL
+        finalStateHL = simulate steps initialStateHL
     let resultLL = readArray (registers finalStateLL) 0
         resultHL = readArray (registers finalStateHL) 0
     pure $ resultLL .== resultLL
@@ -95,12 +97,11 @@ equivHaskell src = do
     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
-    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
     let steps = 100
-    emptyRegs <- mkRegisters "registers" []
-    emptyFlags <- mkFlags "flags" []
-    prog <- assemble src
-    let finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
+        mem = mkMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+        prog = assemble src
+        initialState = boot prog defaultRegisters mem defaultFlags
+    let finalState = simulate steps initialState
         result = readArray (registers finalState) 0
     pure $ result .== energyEstimate t1 t2 p1 p2
 
@@ -112,14 +113,11 @@ faultyExample src = do
     p2 <- forall "p2"
     constrain $ p1 .>= 0
     constrain $ p2 .>= 0
-
-    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-
     let steps = 100
-    emptyRegs <- mkRegisters "registers" []
-    emptyFlags <- mkFlags "flags" []
-    prog <- assemble src
-    let finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
+        mem = mkMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
+        prog = assemble src
+        initialState = boot prog defaultRegisters mem defaultFlags
+    let finalState = simulate steps initialState
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   sNot overflow
@@ -135,12 +133,11 @@ correct src = do
     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
-    mem <- mkMemory "memory" [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
-    prog <- assemble src
-    emptyRegs <- mkRegisters "registers" []
-    emptyFlags <- mkFlags "flags" []
+    let prog = assemble src
+        mem = mkMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
     let steps = 100
-        finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
+        initialState = boot prog defaultRegisters mem defaultFlags
+        finalState = simulate steps initialState
         result = readArray (registers finalState) 0
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   sNot overflow

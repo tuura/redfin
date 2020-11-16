@@ -1,31 +1,36 @@
 module Redfin.Examples.Common where
 
-import           Data.SBV
+import           Data.Bifunctor
+import           Data.SBV        hiding (SFunArray, SymArray (..))
 import           Redfin.Assembly
+import           Redfin.SBV
 import           Redfin.Types
 
 r0, r1, r2, r3 :: Register
 [r0, r1, r2, r3] = [0 .. 3]
 
-mkRegisters :: String -> [(Register, Value)] -> Symbolic RegisterBank
-mkRegisters name inits = do
-    blanks <- newArray name (Just . literal $ 0)
-    pure $ foldr (\(k, v) arr -> writeArray arr k v) blanks inits
+mkRegisters :: [(Register, Value)] -> RegisterBank
+mkRegisters = sListArray 0
 
-mkFlags :: String -> [(Flag, Bool)] -> Symbolic Flags
-mkFlags name inits = do
-    blanks <- newArray name (Just sFalse)
-    pure $ foldr (\(k, v) arr -> writeArray arr (flagId k) (literal v)) blanks inits
+defaultRegisters :: RegisterBank
+defaultRegisters = mkRegisters []
 
-mkMemory :: String -> [(MemoryAddress, Value)] -> Symbolic Memory
-mkMemory name inits = do
-    blanks <- newArray name (Just . literal $ 0)
-    pure $ foldr (\(k, v) arr -> writeArray arr k v) blanks inits
+mkFlags :: [(Flag, Bool)] -> Flags
+mkFlags inits = sListArray False (map (bimap flagId literal) inits)
+
+defaultFlags :: Flags
+defaultFlags = mkFlags []
+
+mkMemory :: [(MemoryAddress, Value)] -> Memory
+mkMemory inits = sListArray 0 inits
+
+defaultMemory :: Memory
+defaultMemory = mkMemory []
 
 dumpMemory :: WordN 8 -> WordN 8 -> Memory -> [(Int, Value)]
-dumpMemory from to m = filter ((/=0) . snd) $ zip [0 ..] $ map
-    (readArray m)
-    [literal from .. literal to]
+dumpMemory from to m =
+  filter ((/=0) . snd) . zip [0 ..] . map (readArray m) $
+  [literal from .. literal to]
 
 boot :: Program -> RegisterBank -> Memory -> Flags -> State
 boot prog regs mem flags =

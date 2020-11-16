@@ -61,6 +61,12 @@ fromUImm10Correct = do
   let y = Types.fromUImm10 (x :: Types.UImm10)
   pure $ y `inRange` (minBound :: Types.Value, maxBound :: Types.Value)
 
+fromSignedCorrect :: Symbolic SBool
+fromSignedCorrect = do
+  x <- forall "x"
+  let y = Types.fromSigned (x :: Types.SImm8)
+  pure $ Types.toSigned y .== x
+
 {-------------------------------------
   Correctness of instruction decoding
 --------------------------------------}
@@ -84,6 +90,34 @@ decodeArithmCorrect = do
     arithm :: SList (WordN 6)
     arithm = [0b000100, 0b000101, 0b000110, 0b000111]
 
+-- | Prove that for every arithmetic with immediate argument opcode,
+-- register and memory address, the decoded opcode matches the initial one
+decodeArithmImmCorrect :: Symbolic SBool
+decodeArithmImmCorrect = do
+  (op :: Types.Opcode)  <- forall "op"
+  (r :: Types.Register) <- forall "r"
+  (imm :: Types.SImm8)  <- forall "imm"
+  constrain $ op `SBV.elem` arithmImm
+  let i = op # r # Types.fromSigned imm
+  pure $ -- "Opcode decoded correctly"
+         Decoder.decodeOpcode i .== op
+     .&& -- "Register decoded correctly"
+         Decoder.decodeRegister i .== r
+     .&& -- "Immediate argument decoded correctly"
+         Decoder.decodeSImm8 i .== imm
+  where
+    arithmImm :: SList (WordN 6)
+    arithmImm = [0b100000, 0b100001, 0b100010, 0b100011]
 
-
+decodeLoadSICorrect :: Symbolic SBool
+decodeLoadSICorrect = do
+  (r :: Types.Register) <- forall "r"
+  (imm :: Types.SImm8)  <- forall "imm"
+  let op = 0b100111
+  let i = op # r # Types.fromSigned imm
+  pure $ Decoder.decodeOpcode i .== op
+     .&& -- "Register decoded correctly"
+         Decoder.decodeRegister i .== r
+     .&& -- "Immediate argument decoded correctly"
+         Decoder.decodeSImm8 i .== imm
 -----------------------------------------------------------------------------

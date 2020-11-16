@@ -26,7 +26,8 @@ main = do
     createDirectory dirname
     withCurrentDirectory dirname $ do
         benchmarkEnergyEstimate Energy.energyEstimateHighLevel
-        mapM_ (\n -> benchmarkArraySum (Sum.sumArrayHighLevel n) n) [6, 9, 12, 15, 18]
+        mapM_ (\n -> benchmarkArraySum (Sum.sumArrayHighLevel n) n)
+                     [6, 9, 12, 15, 18]
         mapM_ (benchmarkArraySum (Sum.sumArrayLowLevel)) [6, 9, 12, 15, 18]
         benchmarkManhattanDistance
 

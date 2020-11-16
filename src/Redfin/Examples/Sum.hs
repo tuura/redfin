@@ -1,12 +1,15 @@
 module Redfin.Examples.Sum where
 
-import           Data.SBV                   hiding (label)
+import           Control.Monad.IO.Class
+import           Data.SBV                   hiding (SFunArray, SymArray (..),
+                                             label)
 import           Prelude                    hiding (read)
 import           Redfin.Assembly            hiding (abs, div)
 import qualified Redfin.Assembly            as Assembly
 import           Redfin.Examples.Common
 import           Redfin.Language.Expression
 import           Redfin.Listing
+import           Redfin.SBV
 import           Redfin.Simulate
 import           Redfin.Types
 import           Text.Pretty.Simple         (pPrint)
@@ -55,22 +58,22 @@ type Constrain = Value -> Symbolic ()
 
 type Statement = State -> SBool
 
-sumArrayTheorem :: Script -> Int -> Constrain -> Statement -> Symbolic SBool
+sumArrayTheorem :: Script -> Int -> Constrain
+                -> Statement -> Symbolic SBool
 sumArrayTheorem src arraySize constr statement = do
     let names = map (("x" ++) . show) [1..arraySize]
     summands <- symbolics names
     -- constrain xs to be in [0, 1000]
-    sequence_ (zipWith ($) (repeat constr) summands)
-    mem <- mkMemory "memory"
-                (zip [2..] summands ++
+    sequence_(zipWith ($) (repeat constr) summands)
+    let mem = mkMemory
+                 (zip [2..] summands ++
                  [(1, 100)] ++
                  [(0, literal . fromIntegral $ arraySize)] ++
                  [(255, 2)])
-    emptyRegs <- mkRegisters "registers" []
-    emptyFlags <- mkFlags "flags" []
-    prog <- assemble sumArrayLowLevel
+    let prog = assemble sumArrayLowLevel
     let steps = 1000
-        finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
+        initialState = boot prog defaultRegisters mem defaultFlags
+        finalState = simulate steps initialState
         result = readArray (registers finalState) 0
         halted = readArray (flags finalState) (flagId Halt)
         overflow = readArray (flags finalState) (flagId Overflow)
@@ -91,23 +94,25 @@ noOverflow src arraySize =
         statement state =
             let halted = readArray (flags state) (flagId Halt)
                 overflow = readArray (flags state) (flagId Overflow)
-            in halted .&& sNot overflow
+            in halted
+            .&& sNot overflow
     in sumArrayTheorem src arraySize constr statement
 
 equivHaskell :: Script -> Int -> Symbolic SBool
 equivHaskell src arraySize = do
     let names = map (("x" ++) . show) [1..arraySize]
     summands <- symbolics names
-    -- summands <- map literal [1..10]
+    -- summands <- pure $ map literal [1..fromIntegral arraySize]
     -- constrain xs to be in [0, 1000]
     -- mapM_ (\x -> constrain (x .== 1)) summands
     mapM_ (\x -> constrain (x .>= 0 .&& x .<= 1000)) summands
-    emptyRegs <- mkRegisters "registers" []
-    emptyFlags <- mkFlags "flags" []
-    prog <- assemble src
-    mem <- mkMemory "memory" (zip [2..] summands ++ [(1, 100)] ++
-                                [(0, literal . fromIntegral $ arraySize)] ++ [(255, 2)])
+    let prog = assemble src
+    let mem = mkMemory (zip [2..] summands ++
+                     [(1, 100)] ++
+                     [(0, literal . fromIntegral $ arraySize)] ++
+                     [(255, 2)])
     let steps = 1000
-        finalState = simulate steps $ boot prog emptyRegs mem emptyFlags
+        initialState = boot prog defaultRegisters mem defaultFlags
+        finalState = simulate steps initialState
         result = readArray (registers finalState) 0
     pure $ result .== sumArray summands

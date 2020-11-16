@@ -12,8 +12,16 @@
 -----------------------------------------------------------------------------
 module Redfin.Examples.Add where
 
-import           Data.SBV                     hiding (( # ), (%))
+import           Control.Monad.IO.Class       (liftIO)
+import           Data.SBV                     hiding (SFunArray, SymArray (..),
+                                               ( # ), (%))
+import           Data.SBV.Internals           (Result (..), SBVRunMode (..),
+                                               runSymbolic)
 import           Prelude                      hiding (read)
+import           Redfin.SBV
+import           Text.Pretty.Simple           (pPrint)
+
+import           Redfin
 import           Redfin.Assembly              hiding (abs, div)
 import qualified Redfin.Assembly              as Assembly
 import           Redfin.Data.Fixed
@@ -23,7 +31,6 @@ import           Redfin.Language.Expression
 import           Redfin.Listing
 import           Redfin.Simulate
 import           Redfin.Types
-import           Text.Pretty.Simple           (pPrint)
 
 addHaskell :: Integral a => a -> a -> a
 addHaskell x y = x + y
@@ -44,22 +51,33 @@ addLowLevel = do
     add r0 y
     halt
 
+noOverflow :: Script -> Symbolic SBool
+noOverflow src = do
+    x <- forall "x"
+    y <- forall "y"
+    constrain $ x .>= 0 .&& x .<= 1000
+    constrain $ y .>= 0 .&& y .<= 1000
+    let prog = assemble src
+        steps = 3
+    let mem = mkMemory [(0, x), (1, y)]
+    let initialState = boot prog defaultRegisters mem defaultFlags
+        finalState = simulate steps initialState
+    let halted = readArray (flags finalState) (flagId Halt)
+        overflow = readArray (flags finalState) (flagId Overflow)
+    pure $ halted .&& sNot overflow
+
 equivalence :: Symbolic SBool
 equivalence = do
-    x <- forall "t1"
-    y <- forall "t2"
-    -- constrain $ t1 .>= 0 &&& t1 .<= toMilliSeconds (30 % Year)
-    -- constrain $ t2 .>= 0 &&& t2 .<= toMilliSeconds (30 % Year)
-    -- constrain $ p1 .>= 0 &&& p1 .<= toMilliWatts (1 % Watt)
-    -- constrain $ p2 .>= 0 &&& p2 .<= toMilliWatts (1 % Watt)
-    emptyRegs <- mkRegisters "registers" []
-    emptyFlags <- mkFlags "flags" []
-    progLL <- assemble addLowLevel
-    progHL <- assemble addHighLevel
-    mem <- mkMemory "memory" [(0, x), (1, y), (3, 100)]
+    x <- forall "x"
+    y <- forall "y"
+    let progLL = assemble addLowLevel
+    let progHL = assemble addHighLevel
+    let mem = mkMemory [(0, x), (1, y), (3, 100)]
     let steps = 100
-        finalStateLL = simulate steps $ boot progLL emptyRegs mem emptyFlags
-        finalStateHL = simulate steps $ boot progHL emptyRegs mem emptyFlags
-        resultLL = readArray (registers finalStateLL) 0
+    let initialStateLL = boot progLL defaultRegisters mem defaultFlags
+        initialStateHL = boot progHL defaultRegisters mem defaultFlags
+    let finalStateLL = simulate steps initialStateLL
+        finalStateHL = simulate steps initialStateHL
+    let resultLL = readArray (registers finalStateLL) 0
         resultHL = readArray (registers finalStateHL) 0
     pure $ resultLL .== resultHL

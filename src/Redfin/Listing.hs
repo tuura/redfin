@@ -31,8 +31,15 @@ prettyPrintScript = pPrint . showScript
 showScript :: Script -> T.Text
 showScript src =
     T.replace " :: SInt8"  "" .
-    T.replace " :: SInt16"  "" .
+    T.replace " :: SInt 8"  "" .
+    T.replace " :: SInt 10"  "" .
+    T.replace " :: SInt 16"  "" .
+    T.replace " :: SWord 2" "" .
+    T.replace " :: SWord 4" "" .
+    T.replace " :: SWord 8" "" .
     T.replace " :: SWord8" "" .
+    T.replace " :: SWord 10" "" .
+    T.replace " :: SWord 16" "" .
     T.pack . unlines $
     map showInstructionCode $ machineCode src
 
@@ -83,4 +90,5 @@ showInstructionCode code =
          Just 0b111000 -> "not " ++ show register
          Just 0b111001 -> "abs " ++ show register
          Just 0b000000 -> "halt "
-         _             -> "illigal instruction"
+         Just _        -> "illegal instruction"
+         Nothing       -> show code
