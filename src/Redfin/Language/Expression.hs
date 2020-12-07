@@ -5,7 +5,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Redfin.Language.Expression
--- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2018
+-- Copyright   :  (c) Andrey Mokhov, Georgy Lukyanov 2018-2020
 --
 -- Maintainer  :  andrey.mokhov@gmail.com
 -- Stability   :  experimental
@@ -14,45 +14,86 @@
 --
 -----------------------------------------------------------------------------
 module Redfin.Language.Expression (
-    -- * Stack
-    Stack (..), push, pop,
+  -- * Stack and Temporary are typed memory locations
+  stack, temporary,
 
-    -- * Typed memory locations
-    Variable (..), Temporary (..), read,
+  -- * Expressions
+  Expression (..), varAtAddress,
 
-    -- * Expressions
-    Expression (..), compile
-    )where
+  -- * Compiler
+  initCompiler, compile
+  ) where
 
+import           Control.Monad.State.Class
+import           Data.List                 (intersect)
+import           Data.Maybe                (fromJust)
 import           Data.SBV
-import           Prelude           hiding (abs, and, div, not, or, read)
+import           Data.Text                 (Text)
+import qualified Data.Text                 as Text
+import           Prelude                   hiding (abs, and, div, not, or, read)
 
-import qualified Prelude           (abs, div)
+import qualified Prelude                   (abs, div, not)
 
 import           Redfin.Assembly
-import qualified Redfin.Data.Fixed as Fixed
+import qualified Redfin.Data.Fixed         as Fixed
 import           Redfin.Types
 
--- | We distinguish between fixed-point and integer values
-data ValueType = FPType | IntType
-
 -- | Temporary, Stack and Variable are all semantically different memory addresses
-newtype Temporary = Temporary MemoryAddress
-newtype Stack     = Stack     MemoryAddress
+newtype Temporary = MkTemporary { fromTemporary :: MemoryAddress }
 
-data Variable :: ValueType -> * where
-    IntegerVariable    :: MemoryAddress -> Variable IntType
-    FixedPointVariable :: MemoryAddress -> Variable FPType
+temporary :: MemoryAddress -> Temporary
+temporary = MkTemporary
+
+data Stack = MkStack { _pointer :: MemoryAddress
+                     , _size    :: WordN 4
+                     }
+
+stack :: MemoryAddress -> Stack
+stack addr = MkStack addr maxBound
+
+data Variable where
+    MkVariable :: MemoryAddress -> Variable
 
 -- | Literal values get compiled to immediate arguments
-data Literal :: ValueType -> * where
-    IntegerLiteral    :: SImm8 -> Literal IntType
-    FixedPointLiteral :: SImm8 -> Literal FPType
+data Literal where
+    MkLiteral :: SImm8 -> Literal
+
+-- | State of the compiler:
+--   * the compiled assembly script
+--   * a stack
+--   * a list of temporary memory locations
+data CompilerEnv =
+  MkCompilerEnv { _reg   :: Register
+                , _tmp   :: Temporary
+                , _stack :: Stack
+                }
+
+-- | Initialise the compiler
+--   The compiler needs one register for data manipulation, a
+initCompiler :: Register -> Temporary -> Stack-> CompilerEnv
+initCompiler = MkCompilerEnv
+
+-- | Check if the compiler state is valid, considering REDFIN's restrictions
+validate :: CompilerEnv -> Bool
+validate s =
+  let -- stack is in bounds
+      stackValid = fromJust . unliteral $
+        _pointer (_stack s) + (literal $ fromIntegral $_size (_stack s)) .<= literal addressSpace
+      -- all heap addresses are in bound
+      heapValid = heapSpace <= addressSpace
+      noOverlap = Prelude.not (heapSpace `elem` stackSpace)
+  in all id [stackValid, heapValid, noOverlap]
+  where addressSpace = fromJust . unliteral $ maxBound @MemoryAddress
+        programSpace = fromIntegral . fromJust $ unliteral (maxBound @InstructionAddress)
+        heapSpace = (fromJust . unliteral) $ fromTemporary (_tmp s)
+        stackSpace = map (fromJust . unliteral)
+          [_pointer (_stack s)..
+           _pointer (_stack s) + (literal . fromIntegral $ _size (_stack s))]
 
 -- | Pushes the value stored in the register to the stack, advances the stack
 --   pointer, and destroys the value stored in the register.
 push :: Register -> Stack -> Script
-push reg (Stack pointer) = do
+push reg (MkStack pointer _) = do
     stmi reg pointer
     ld reg pointer
     add_si reg 1
@@ -61,7 +102,7 @@ push reg (Stack pointer) = do
 -- | Decrements the stack pointer, and loads the value from the top of the stack
 --   into the given register.
 pop :: Register -> Stack -> Script
-pop reg (Stack pointer) = do
+pop reg (MkStack pointer _) = do
     ld reg pointer
     sub_si reg 1
     st reg pointer
@@ -71,78 +112,65 @@ type BinaryOperator = Register -> MemoryAddress -> Script
 
 -- | Applies a binary operation, such as add, to the two top values stored in
 --   stack and returns the result in a register
-applyBinary :: Register -> Stack -> Temporary -> BinaryOperator -> Script
-applyBinary reg stack (Temporary tmp) op = do
+applyBinary :: CompilerEnv -> BinaryOperator -> Script
+applyBinary (MkCompilerEnv reg (MkTemporary tmp) stack) op = do
     pop reg stack
     st reg tmp
     pop reg stack
     op reg tmp
 
--- TODO: Switch from Lit to Imm :: Immediate a -> Expression a
--- TODO: Add support for register-immediate operators
--- TODO: Generalise Abs to arbitrary unary constructors
-data Expression :: ValueType -> * where
-    Lit :: Literal  a     -> Expression a
-    Var :: Variable a     -> Expression a
-    Bin :: BinaryOperator -> Expression a -> Expression a -> Expression a
-    Abs :: Expression a   -> Expression a
+data Expression where
+    Lit :: Literal     -> Expression
+    Var :: Variable     -> Expression
+    Bin :: BinaryOperator -> Expression -> Expression -> Expression
+    Abs :: Expression   -> Expression
 
-instance Num (Expression IntType) where
-    fromInteger = Lit . IntegerLiteral . fromIntegral
+instance Num Expression where
+    fromInteger = Lit . MkLiteral . fromIntegral
     (+)         = Bin add
     (-)         = Bin sub
     (*)         = Bin mul
     abs         = Abs
     signum x    = x `Prelude.div` Prelude.abs x
 
-instance Eq (Expression IntType) where
-    (==) = error "Eq cannot be implemented for Expression IntType"
+instance Eq Expression where
+    (==) = error "Eq cannot be implemented for Expression"
 
-instance Ord (Expression IntType) where
-    compare = error "Ord cannot be implemented for Expression IntType"
+instance Ord Expression where
+    compare = error "Ord cannot be implemented for Expression"
 
-instance Real (Expression IntType) where
-    toRational = error "Real cannot be implemented for Expression IntType"
+instance Real Expression where
+    toRational = error "Real cannot be implemented for Expression"
 
-instance Enum (Expression IntType) where
-    toEnum   = error "Enum cannot be implemented for Expression IntType"
-    fromEnum = error "Enum cannot be implemented for Expression IntType"
+instance Enum Expression where
+    toEnum   = error "Enum cannot be implemented for Expression"
+    fromEnum = error "Enum cannot be implemented for Expression"
 
-instance Integral (Expression IntType) where
+instance Integral Expression where
     div       = Bin div
-    quotRem   = error "quotRem is not implemented for Expression IntType"
-    toInteger = error "quotRem cannot be implemented for Expression IntType"
+    quotRem   = error "quotRem is not implemented for Expression"
+    toInteger = error "toInteger cannot be implemented for Expression"
 
-instance Num (Expression FPType) where
-    fromInteger = Lit . FixedPointLiteral . fromInteger
-    (+)         = Bin fadd
-    (-)         = Bin fsub
-    (*)         = Bin fmul
-    abs         = Abs
-    signum x    = x / Prelude.abs x
-
-instance Fractional (Expression FPType) where
-    fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
-    (/)            = Bin fdiv
-
-read :: Variable a -> Expression a
-read = Var
+varAtAddress :: MemoryAddress -> Expression
+varAtAddress = Var . MkVariable
 
 -- | Compile high-level expression to assembly.
-compile :: Register -> Stack -> Temporary -> Expression a -> Script
-compile reg stack tmp expr = case expr of
-    Lit (IntegerLiteral    value) -> ld_si reg value
-    Lit (FixedPointLiteral value) -> do
-        ld_si reg value
-        sl_i  reg (literal Fixed.fracBits) -- interpret literal value as a fixed-point number
-    Var (IntegerVariable    var) -> ld reg var
-    Var (FixedPointVariable var) -> ld reg var
-    Bin op x y -> do
-        compile reg stack tmp x
-        push reg stack
-        compile reg stack tmp y
-        push reg stack
-        applyBinary reg stack tmp op
-    Abs x -> do
-        compile reg stack tmp x
-        abs reg
+compile :: CompilerEnv -> Expression -> Script
+compile env expr = do
+  compileExpr env expr
+  halt
+  where
+    compileExpr :: CompilerEnv -> Expression -> Script
+    compileExpr env@(MkCompilerEnv reg tmp stack) expr =
+      case expr of
+        Lit (MkLiteral value) -> ld_si reg value
+        Var (MkVariable  var) -> ld reg var
+        Bin op x y -> do
+            compileExpr env x
+            push reg stack
+            compileExpr env y
+            push reg stack
+            applyBinary env op
+        Abs x -> do
+            compileExpr env x
+            abs reg

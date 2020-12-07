@@ -21,14 +21,13 @@ distance xs ys = sum $ zipWith (\x y -> abs (x - y)) xs ys
 
 distanceHighLevel :: Script
 distanceHighLevel = do
-    let xs = map (read . IntegerVariable)
+    let xs = map varAtAddress
           [2..(fromIntegral pointsCount) + 1]
-        ys = map (read . IntegerVariable)
+        ys = map varAtAddress
              [(fromIntegral pointsCount) +
                2..2 * (fromIntegral pointsCount) + 1]
-        temp = Temporary 0
-        stack = Stack 1
-    compile r0 stack temp (distance xs ys)
+        compiler = initCompiler r0 (temporary 0) (stack 1)
+    compile compiler (distance xs ys)
     halt
 
 faultyExample :: Script -> Symbolic SBool

@@ -37,12 +37,10 @@ addHaskell x y = x + y
 
 addHighLevel :: Script
 addHighLevel = do
-    let x     = read $ IntegerVariable 0
-        y     = read $ IntegerVariable 1
-        temp  = Temporary 3
-        stack = Stack 5
-    compile r0 stack temp (addHaskell x y)
-    halt
+    let x     = varAtAddress 0
+        y     = varAtAddress 1
+        compiler = initCompiler r0 (temporary 255) (stack 5)
+    compile compiler (addHaskell x y)
 
 addLowLevel :: Script
 addLowLevel = do

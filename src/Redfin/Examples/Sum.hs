@@ -22,10 +22,8 @@ sumArray = sum
 
 sumArrayHighLevel :: Int -> Script
 sumArrayHighLevel arraySize = do
-    let xs = map (read . IntegerVariable) [2..(fromIntegral arraySize) + 1]
-        temp = Temporary 0
-        stack = Stack 1
-    compile r0 stack temp (sumArray xs)
+    let xs = map varAtAddress [2..(fromIntegral arraySize) + 1]
+    compile (initCompiler r0 (temporary 0) (stack 1)) (sumArray xs)
     halt
 
 sumArrayLowLevel :: Script

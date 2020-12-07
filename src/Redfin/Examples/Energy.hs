@@ -32,25 +32,24 @@ energyEstimate' t1 t2 p1 p2 = abs (t1 - t2) * (p1 + p2) / 2
 
 energyEstimateHighLevel :: Script
 energyEstimateHighLevel = do
-    let t1    = read $ IntegerVariable 0
-        t2    = read $ IntegerVariable 1
-        p1    = read $ IntegerVariable 2
-        p2    = read $ IntegerVariable 3
-        temp  = Temporary 4
-        stack = Stack 5
-    compile r0 stack temp (energyEstimate t1 t2 p1 p2)
+    let t1    = varAtAddress 0
+        t2    = varAtAddress 1
+        p1    = varAtAddress 2
+        p2    = varAtAddress 3
+        compiler = initCompiler r0 (temporary 4) (stack 5)
+    compile compiler (energyEstimate t1 t2 p1 p2)
     halt
 
-energyEstimateHighLevelFP :: Script
-energyEstimateHighLevelFP = do
-    let t1    = read $ FixedPointVariable 0
-        t2    = read $ FixedPointVariable 1
-        p1    = read $ FixedPointVariable 2
-        p2    = read $ FixedPointVariable 3
-        temp  = Temporary 4
-        stack = Stack 5
-    compile r0 stack temp (energyEstimate' t1 t2 p1 p2)
-    halt
+-- energyEstimateHighLevelFP :: Script
+-- energyEstimateHighLevelFP = do
+--     let t1    = read $ FixedPointVariable 0
+--         t2    = read $ FixedPointVariable 1
+--         p1    = read $ FixedPointVariable 2
+--         p2    = read $ FixedPointVariable 3
+--         temp  = Temporary 4
+--         stack = Stack 5
+--     compile r0 stack temp (energyEstimate' t1 t2 p1 p2)
+--     halt
 
 energyEstimateLowLevel :: Script
 energyEstimateLowLevel = do
