@@ -77,15 +77,15 @@ collectLabels src =
     labels $ snd $ runState src (MkAssemblerState [] Map.empty 0)
 
 -- | Translate an assembly script into binary machine codes
-machineCode :: Script -> [InstructionCode]
+machineCode :: Script -> [(InstructionAddress, InstructionCode)]
 machineCode src =
     let labels = collectLabels src
-    in map snd . reverse . program . snd $
+    in reverse . program . snd $
        runState src (MkAssemblerState [] labels 0)
 
 -- | Assemble an assembly script into a program
 assemble :: Script -> Program
-assemble src = sListArray 0 $ zip [0..] (machineCode src)
+assemble src = sListArray 0 (machineCode src)
 
 -- | Declare a label in a program
 label :: String -> Script

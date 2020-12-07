@@ -65,7 +65,7 @@ add rX dmemaddr = do
     arg2 <- readMemory dmemaddr
     let overflow = arg2 .> 0 .&& arg1 .> (maxBound @Value - arg2) .||
                    arg2 .< 0 .&& arg1 .< (minBound @Value - arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 + arg2)
 
@@ -77,7 +77,7 @@ add_si rX simm = do
     arg2 <- pure $ fromSImm8 simm
     let overflow = arg2 .> 0 .&& arg1 .> (maxBound @Value - arg2) .||
                    arg2 .< 0 .&& arg1 .< (minBound @Value - arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 + arg2)
 
@@ -89,7 +89,7 @@ sub rX dmemaddr = do
     arg2 <- readMemory dmemaddr
     let overflow = arg2 .> 0 .&& arg1 .< (minBound @Value + arg2) .||
                    arg2 .< 0 .&& arg1 .> (maxBound @Value + arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 - arg2)
 
@@ -101,7 +101,7 @@ sub_si rX simm = do --writeRegister rX <~~ (readRegister rX, (-), )
     arg2 <- pure $ fromSImm8 simm
     let overflow = arg2 .> 0 .&& arg1 .< (minBound @Value + arg2) .||
                    arg2 .< 0 .&& arg1 .> (maxBound @Value + arg2)
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 - arg2)
 
@@ -116,7 +116,7 @@ mul rX dmemaddr = do -- writeRegister rX <~~ (readRegister rX, (*), readMemory d
                .|| arg1 .<= 0 .&& arg2 .>  0 .&& arg1 .< sDiv (minBound @Value) arg2
                .|| arg1 .<= 0 .&& arg2 .<= 0 .&& arg1 ./= 0
                                              .&& arg2 .< sDiv (maxBound @Value) arg1
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 * arg2)
 
@@ -131,7 +131,7 @@ mul_si rX simm = do
                .|| arg1 .<= 0 .&& arg2 .>  0 .&& arg1 .< sDiv (minBound @Value) arg2
                .|| arg1 .<= 0 .&& arg2 .<= 0 .&& arg1 ./= 0
                                              .&& arg2 .< sDiv (maxBound @Value) arg1
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (arg1 * arg2)
 
@@ -142,7 +142,7 @@ div rX dmemaddr = do
     arg1 <- readRegister rX
     arg2 <- readMemory dmemaddr
     let overflow = arg2 .== 0 .|| arg1 .== minBound @Value .&& arg2 .== -1
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (sDiv arg1 arg2)
 
@@ -153,7 +153,7 @@ div_si rX simm = do
     arg1 <- readRegister rX
     arg2 <- pure $ fromSImm8 simm
     let overflow = arg2 .== 0 .|| arg1 .== minBound @Value .&& arg2 .== -1
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite overflow overflowState state
     writeRegister rX (sDiv arg1 arg2)
 
@@ -210,7 +210,7 @@ abs :: Register -> Redfin ()
 abs rX = do
     state <- readState
     result <- Prelude.abs <$> readRegister rX
-    let overflowState = snd $ redfin (writeFlag Overflow sTrue) state
+    let overflowState = snd $ transform (writeFlag Overflow sTrue) state
     writeState $ ite (result .< 0) overflowState state
     writeRegister rX result
 
@@ -290,7 +290,7 @@ jmpi_ct :: SImm10 -> Redfin ()
 jmpi_ct simm = do
     condition <- readFlag Condition
     state <- readState
-    let jumpState = snd $ redfin (jmpi simm) state
+    let jumpState = snd $ transform (jmpi simm) state
     writeState $ ite condition jumpState state
 
 -- | Instruction @jmpi_cf simm@ is implemented as
@@ -299,7 +299,7 @@ jmpi_cf :: SImm10 -> Redfin ()
 jmpi_cf simm = do
     condition <- readFlag Condition
     state <- readState
-    let jumpState = snd $ redfin (jmpi simm) state
+    let jumpState = snd $ transform (jmpi simm) state
     writeState $ ite condition state jumpState
 
 -- | Instruction @wait uimm@ does nothing for @uimm@ clock cycles.

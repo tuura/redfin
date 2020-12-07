@@ -40,4 +40,4 @@ simulateWithTrace tracer steps state =
   in tracer' $ if steps <= 0 then state
                else simulate (steps - 1) nextState
   where
-    nextState = snd $ redfin executeInstruction state
+    nextState = snd $ transform executeInstruction state

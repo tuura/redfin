@@ -30,7 +30,7 @@ import           Redfin.SBV
 import           Redfin.Types
 
 -- | The Redfin state transformer.
-newtype Redfin a = Redfin { redfin :: State -> (a, State) } deriving Functor
+newtype Redfin a = Redfin { transform :: State -> (a, State) } deriving Functor
 
 -- | A standard 'Applicative' instance available for any 'Monad'.
 instance Applicative Redfin where
@@ -40,7 +40,7 @@ instance Applicative Redfin where
 -- | A standard state 'Monad'.
 instance Monad Redfin where
     return a       = Redfin $ \s -> (a, s)
-    Redfin r >>= f = Redfin $ \s -> let (a, s') = r s in redfin (f a) s'
+    Redfin r >>= f = Redfin $ \s -> let (a, s') = r s in transform (f a) s'
 
 -- | Read the current 'State'.
 readState :: Redfin State
@@ -100,7 +100,7 @@ toMemoryAddress :: Value -> Redfin MemoryAddress
 toMemoryAddress value = do
     let valid = value .< 256
     transformState $ \s ->
-      ite valid s (snd $ redfin (writeFlag OutOfMemory sTrue) s)
+      ite valid s (snd $ transform (writeFlag OutOfMemory sTrue) s)
     return $ fromBitsLE (take 8 $ blastLE value)
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned

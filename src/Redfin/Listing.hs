@@ -41,7 +41,7 @@ showScript src =
     T.replace " :: SWord 10" "" .
     T.replace " :: SWord 16" "" .
     T.pack . unlines $
-    map showInstructionCode $ machineCode src
+    map (showInstructionCode . snd) $ machineCode src
 
 showInstructionCode :: InstructionCode -> String
 showInstructionCode code =
