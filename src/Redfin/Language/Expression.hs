@@ -14,14 +14,11 @@
 --
 -----------------------------------------------------------------------------
 module Redfin.Language.Expression (
-  -- * Stack and Temporary are typed memory locations
-  stack, temporary,
-
   -- * Expressions
   Expression (..), varAtAddress,
 
   -- * Compiler
-  initCompiler, compile
+  compile
   ) where
 
 import           Control.Monad.State.Class
@@ -90,21 +87,21 @@ validate s =
           [_pointer (_stack s)..
            _pointer (_stack s) + (literal . fromIntegral $ _size (_stack s))]
 
--- | Pushes the value stored in the register to the stack, advances the stack
+-- | Pushes the value stored in the register to the stack, decrements the stack
 --   pointer, and destroys the value stored in the register.
 push :: Register -> Stack -> Script
 push reg (MkStack pointer _) = do
     stmi reg pointer
     ld reg pointer
-    add_si reg 1
+    sub_si reg 1
     st reg pointer
 
--- | Decrements the stack pointer, and loads the value from the top of the stack
+-- | Advances the stack pointer, and loads the value from the top of the stack
 --   into the given register.
 pop :: Register -> Stack -> Script
 pop reg (MkStack pointer _) = do
     ld reg pointer
-    sub_si reg 1
+    add_si reg 1
     st reg pointer
     ldmi reg pointer
 
@@ -155,11 +152,16 @@ varAtAddress :: MemoryAddress -> Expression
 varAtAddress = Var . MkVariable
 
 -- | Compile high-level expression to assembly.
-compile :: CompilerEnv -> Expression -> Script
-compile env expr = do
-  compileExpr env expr
+compile :: Expression -> Script
+compile expr = do
+  ld_i 0 (maxBound @MemoryAddress - 2)
+  st 0 (_pointer (_stack defaultEnv))
+  compileExpr defaultEnv expr
   halt
   where
+    defaultEnv :: CompilerEnv
+    defaultEnv = initCompiler 0 (temporary maxBound) (stack (maxBound - 1))
+
     compileExpr :: CompilerEnv -> Expression -> Script
     compileExpr env@(MkCompilerEnv reg tmp stack) expr =
       case expr of

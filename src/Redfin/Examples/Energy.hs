@@ -36,20 +36,7 @@ energyEstimateHighLevel = do
         t2    = varAtAddress 1
         p1    = varAtAddress 2
         p2    = varAtAddress 3
-        compiler = initCompiler r0 (temporary 4) (stack 5)
-    compile compiler (energyEstimate t1 t2 p1 p2)
-    halt
-
--- energyEstimateHighLevelFP :: Script
--- energyEstimateHighLevelFP = do
---     let t1    = read $ FixedPointVariable 0
---         t2    = read $ FixedPointVariable 1
---         p1    = read $ FixedPointVariable 2
---         p2    = read $ FixedPointVariable 3
---         temp  = Temporary 4
---         stack = Stack 5
---     compile r0 stack temp (energyEstimate' t1 t2 p1 p2)
---     halt
+    compile (energyEstimate t1 t2 p1 p2)
 
 energyEstimateLowLevel :: Script
 energyEstimateLowLevel = do
@@ -70,11 +57,15 @@ equivalence = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
-    constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
-    constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
+    -- constrain $ t1 .>= 0 .&& t1 .<= 10000
+    -- constrain $ t2 .>= 0 .&& t2 .<= 10000
+    -- constrain $ p1 .>= 0 .&& p1 .<= 1000
+    -- constrain $ p2 .>= 0 .&& p2 .<= 1000
+    constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (1 % Year)
+    constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (1 % Year)
     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
-    let steps = 100
+    let steps = 1000
         mem = mkMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
     let progLL = assemble energyEstimateLowLevel
         progHL = assemble energyEstimateHighLevel
@@ -92,11 +83,15 @@ equivHaskell src = do
     t2 <- forall "t2"
     p1 <- forall "p1"
     p2 <- forall "p2"
+    -- constrain $ t1 .>= 0 .&& t1 .<= 10
+    -- constrain $ t2 .>= 0 .&& t2 .<= 10
+    -- constrain $ p1 .>= 0 .&& p1 .<= 10
+    -- constrain $ p2 .>= 0 .&& p2 .<= 10
     constrain $ t1 .>= 0 .&& t1 .<= toMilliSeconds (30 % Year)
     constrain $ t2 .>= 0 .&& t2 .<= toMilliSeconds (30 % Year)
     constrain $ p1 .>= 0 .&& p1 .<= toMilliWatts (1 % Watt)
     constrain $ p2 .>= 0 .&& p2 .<= toMilliWatts (1 % Watt)
-    let steps = 100
+    let steps = 1000
         mem = mkMemory [(0, t1), (1, t2), (2, p1), (3, p2), (5, 100)]
         prog = assemble src
         initialState = boot prog defaultRegisters mem defaultFlags
@@ -141,19 +136,6 @@ correct src = do
         overflow = readArray (flags finalState) (flagId Overflow)
     pure $   sNot overflow
          .&& result .>= 0
-
--- simulateHighLevel :: IO ()
--- simulateHighLevel = do
---     let mem = initialiseMemory [ (0, 10)
---                                , (1, 5)
---                                , (2, 3)
---                                , (3, 5), (5, 100)]
---         finalState = simulate 100 $ boot energyEstimateHighLevel mem
---         memoryDump = dumpMemory 0 255 $ memory finalState
---     putStr "Memory Dump: "
---     pPrint memoryDump
---     putStrLn $ "Estimated energy: " ++ show (readArray (registers finalState) 0)
---     putStrLn $ "Clock: " ++ show (clock finalState)
 
 -- An alternative to defining these orphan instances is to switch to SBV's type
 -- class SDivisible instead. Even better is to fix Haskell's class hierarchy.

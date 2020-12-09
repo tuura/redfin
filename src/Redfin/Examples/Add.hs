@@ -39,8 +39,7 @@ addHighLevel :: Script
 addHighLevel = do
     let x     = varAtAddress 0
         y     = varAtAddress 1
-        compiler = initCompiler r0 (temporary 255) (stack 5)
-    compile compiler (addHaskell x y)
+    compile (addHaskell x y)
 
 addLowLevel :: Script
 addLowLevel = do

@@ -26,8 +26,7 @@ distanceHighLevel = do
         ys = map varAtAddress
              [(fromIntegral pointsCount) +
                2..2 * (fromIntegral pointsCount) + 1]
-        compiler = initCompiler r0 (temporary 0) (stack 1)
-    compile compiler (distance xs ys)
+    compile (distance xs ys)
     halt
 
 faultyExample :: Script -> Symbolic SBool
