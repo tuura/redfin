@@ -6,9 +6,6 @@ import           Redfin.Assembly
 import           Redfin.SBV
 import           Redfin.Types
 
-r0, r1, r2, r3 :: Register
-[r0, r1, r2, r3] = [0 .. 3]
-
 mkRegisters :: [(Register, Value)] -> RegisterBank
 mkRegisters = sListArray 0
 

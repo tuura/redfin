@@ -13,7 +13,7 @@ module Redfin.Types (
     -- * Data types
     Value,
     UImm8, UImm10, SImm8, SImm10,
-    Register, RegisterBank,
+    Register, r0, r1, r2, r3, RegisterBank,
     MemoryAddress, Memory,
     InstructionAddress, InstructionCode, Opcode, Program,
     Flag (..), Flags, flagId,
@@ -63,6 +63,10 @@ type SImm10 = SymbolicValue (IntN 10)
 
 -- | Redfin has 4 general-purpose registers.
 type Register = SymbolicValue (WordN 2)
+
+-- | Handy smart-constructors for the four registers of Redfin
+r0, r1, r2, r3 :: Register
+[r0, r1, r2, r3] = [0 .. 3]
 
 -- | The register bank is represented by a map from registers to their values.
 type RegisterBank = SymbolicArray (WordN 2) (IntN 64)
